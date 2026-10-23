@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CDBF Delivery</title>
+<link rel="manifest" href="manifests/delivery.webmanifest">
+<meta name="theme-color" content="#151a22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Delivery">
+<link rel="icon" href="icons/delivery-192.png">
+<link rel="apple-touch-icon" href="icons/delivery-192.png">
+<link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+<main id="app-container"></main>
+<script type="module">
+  import { mount } from './modules/delivery/delivery.js';
+  mount(document.getElementById('app-container'));
+</script>
+</body>
+</html>

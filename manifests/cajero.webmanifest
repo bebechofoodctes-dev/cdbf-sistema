@@ -1,0 +1,24 @@
+{
+  "id": "../cajero.html",
+  "name": "CDBF Cajero",
+  "short_name": "Cajero",
+  "start_url": "../cajero.html",
+  "scope": "../",
+  "display": "standalone",
+  "background_color": "#151a22",
+  "theme_color": "#151a22",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "../icons/cajero-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "../icons/cajero-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
