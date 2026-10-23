@@ -1,5 +1,5 @@
 // URL de la aplicación web de Apps Script (se obtiene al publicar Code.gs)
-export const API_URL = 'PEGAR_AQUI_LA_URL_DE_LA_APP_WEB';
+export const API_URL = 'https://script.google.com/macros/s/AKfycbz5Lx7TLLnj90uIlyYBWDbdYaVCzLOiD79SNf16WuwVEmFwYXUjxPhszESrhba_Xjc/exec';
 
 // Clave del local: llega en el enlace (?k=...) y se guarda en el dispositivo.
 const k = new URLSearchParams(location.search).get('k');
