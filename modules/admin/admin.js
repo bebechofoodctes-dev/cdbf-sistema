@@ -20,7 +20,7 @@ export function mount(root) {
 
 function login(root, aviso = '') {
   root.innerHTML = `<style>${CSS}</style><div class="ad"><div class="pin"><h1>Admin</h1><p style="color:var(--tenue)">Ingresá tu PIN</p>
-    <input id="pin" type="password" inputmode="numeric" autocomplete="off"><p class="err">${esc(aviso)}</p><button id="ok" style="width:100%">Entrar</button></div></div>`;
+    <input id="pin" type="password" inputmode="text" autocomplete="off"><p class="err">${esc(aviso)}</p><button id="ok" style="width:100%">Entrar</button></div></div>`;
   const entrar = async () => {
     const r = await api('admin_login', { pin: root.querySelector('#pin').value });
     if (r.ok) { sessionStorage.setItem('admin_t', r.token); return tablero(root); }
