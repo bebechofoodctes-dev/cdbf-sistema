@@ -143,12 +143,3 @@ function tablero(root) {
   }
   reportes();
 }
-
-const pinInput = document.getElementById('pin'); // Cambia 'pin' si tu ID es otro
-
-if (pinInput) {
-  // Al hacer clic en el input o en su contenedor, forzamos el foco
-  pinInput.addEventListener('click', () => {
-    pinInput.focus();
-  });
-}
