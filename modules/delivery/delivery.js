@@ -90,10 +90,16 @@ function principal(root, nombre) {
     $('#er').textContent = r.error ? ({ ya_tomado: 'Otro repartidor ya tomó ese pedido.', no_listo: 'Cocina todavía no lo terminó.' }[r.error] || 'No se pudo: ' + r.error) : '';
     v = ''; cargar();
   }
-  $('#off').onclick = async () => {
-    const r = await api('delivery_desactivar', { nombre });
-    if (r.error) { $('#er').textContent = r.error === 'pedido_en_curso' ? 'Tenés un pedido en camino: entregalo antes de desactivar.' : 'No se pudo desactivar: ' + r.error; return; }
-    localStorage.removeItem('cdbf_activo'); clearInterval(timer); inicio(root, nombre);
+  $('#off').onclick = () => {
+    const off = $('#off'); off.hidden = true;
+    off.insertAdjacentHTML('afterend', '<div id="cf" style="margin-top:1.5rem"><p><b>¿Cerrar sesión?</b></p><div class="g"><button id="si" class="ok">Sí</button><button id="no" class="sec">No</button></div></div>');
+    const cerrar = () => { $('#cf').remove(); off.hidden = false; };
+    $('#no').onclick = cerrar;
+    $('#si').onclick = async () => {
+      const r = await api('delivery_desactivar', { nombre });
+      if (r.error) { cerrar(); $('#er').textContent = r.error === 'pedido_en_curso' ? 'Tenés un pedido en camino: entregalo antes de cerrar sesión.' : 'No se pudo cerrar la sesión: ' + r.error; return; }
+      localStorage.removeItem('cdbf_activo'); clearInterval(timer); inicio(root, nombre);
+    };
   };
   timer = setInterval(cargar, 4000); cargar();
 }
