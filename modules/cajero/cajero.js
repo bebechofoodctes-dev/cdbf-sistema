@@ -154,7 +154,7 @@ function carga(el, D, ses, mon) {
   const datos = () => {
     $('#dat').innerHTML = S.tipo === 'SALON' ? '<input id="mesa" placeholder="Mesa N°" inputmode="numeric">'
       : `<input id="nom" list="cl" placeholder="Nombre y apellido del cliente" autocomplete="off"><span class="bd" id="niv"></span>
-         ${S.tipo === 'DELIVERY' ? '<input id="tel" placeholder="Teléfono" inputmode="tel"><input id="dir" placeholder="Dirección o link de Google Maps"><input id="mon" type="number" min="0" placeholder="Monto del envío" inputmode="numeric">' : ''}`;
+         ${S.tipo === 'DELIVERY' ? '<input id="tel" placeholder="WhatsApp: código de área y número, sin 0 ni 15 (ej. 3794123456)" inputmode="numeric" maxlength="14"><input id="dir" placeholder="Dirección o link de Google Maps"><input id="mon" type="number" min="0" placeholder="Monto del envío" inputmode="numeric">' : ''}`;
     $('#dat').querySelectorAll('input').forEach(i => i.oninput = totales); totales();
     S.pago = S.tipo === 'SALON' ? null : pagoUI($('#pago')); if (S.tipo === 'SALON') $('#pago').innerHTML = ''; mesas(true);
   };
@@ -188,9 +188,10 @@ function carga(el, D, ses, mon) {
 
   $('#env').onclick = async () => {
     const err = $('#er'); err.className = 'err'; err.textContent = '';
+    if (S.tipo === 'DELIVERY' && val('#tel').replace(/\D/g, '').length !== 10) { err.textContent = 'El teléfono tiene que tener 10 dígitos: código de área y número, sin 0 ni 15 (ej. 3794123456).'; return; }
     const r = await api('crear_pedido', { tipo: S.tipo, mesa: val('#mesa'), cliente: val('#nom'), telefono: val('#tel'), direccion: val('#dir'), envio: val('#mon'),
       items: Object.values(S.items).map(i => ({ n: i.n, c: i.c, o: i.o })), usuario: ses.nombre, ...(S.pago ? S.pago() : {}) });
-    if (r.error) { err.textContent = { pedido_vacio: 'Agregá al menos un producto.', faltan_datos: 'Completá la mesa o el nombre del cliente.', faltan_datos_de_envio: 'Para delivery cargá teléfono y dirección.', falta_metodo_pago: 'Elegí el método de pago.' }[r.error] || 'No se pudo enviar: ' + r.error; return; }
+    if (r.error) { err.textContent = { pedido_vacio: 'Agregá al menos un producto.', faltan_datos: 'Completá la mesa o el nombre del cliente.', faltan_datos_de_envio: 'Para delivery cargá teléfono y dirección.', falta_metodo_pago: 'Elegí el método de pago.', telefono_invalido: 'El teléfono tiene que tener 10 dígitos, sin 0 ni 15.' }[r.error] || 'No se pudo enviar: ' + r.error; return; }
     S.items = {}; datos(); lineas();
     err.className = 'ok'; err.textContent = `Pedido ${r.id_cuenta} enviado a cocina (tanda ${r.tanda}).${r.vuelto ? ' Vuelto: ' + pesos(r.vuelto) : ''}`;
   };
