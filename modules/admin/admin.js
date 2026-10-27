@@ -25,7 +25,11 @@ function login(root, aviso = '') {
   const pinInput = root.querySelector('#pin');
   const btnOk = root.querySelector('#ok');
 
-  pinInput.focus();
+  // Forzar el foco de manera segura usando setTimeout para asegurar que el DOM ya se pintó
+  setTimeout(() => {
+    pinInput.focus();
+    pinInput.click(); // Ayuda en algunos navegadores móviles a invocar el teclado virtual
+  }, 50);
 
   const entrar = async () => {
     const r = await api('admin_login', { pin: pinInput.value });
