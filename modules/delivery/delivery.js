@@ -63,7 +63,7 @@ function principal(root, nombre) {
   };
   const tarjeta = p => `<article class="c ${p.estado === 'EN_CAMINO' ? 'mio' : p.listo ? 'listo' : ''}"><b>${esc(p.cliente)}</b> <small>${esc(p.cuenta)}</small>
     <ul>${p.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul><div>${esc(p.dir || 'Ubicación en enlace')}</div>
-    <a class="bt sec" target="_blank" rel="noopener" href="https://wa.me/${wa(p.tel)}?text=${encodeURIComponent(`Hola ${primero(p.cliente)}, soy ${nombre} de BebechoFood&CavaDrinks y estoy llevando tu pedido`)}">WhatsApp a ${esc(primero(p.cliente))}</a><button class="sec" data-m="${esc(p.id)}">Ver en el mapa</button>
+    <a class="bt sec" target="_blank" rel="noopener" href="https://wa.me/${wa(p.tel)}?text=${encodeURIComponent(`Hola ${primero(p.cliente)}, soy el delivery de BebechoFood&CavaDrinks y estoy llevando tu pedido`)}">WhatsApp a ${esc(primero(p.cliente))}</a><button class="sec" data-m="${esc(p.id)}">Ver en el mapa</button>
     ${p.estado === 'EN_CAMINO' ? `<button class="ok" data-e="${esc(p.id)}">Entregado</button>`
       : `<button data-t="${esc(p.id)}" ${p.listo ? '' : 'disabled'}>${p.listo ? 'Tomar pedido' : 'En cocina, esperá…'}</button>`}</article>`;
 
