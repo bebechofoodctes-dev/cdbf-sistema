@@ -62,7 +62,8 @@ function tablero(root) {
       <div><label>Tipo de entrega</label><select id="t"><option value="">Todos</option>${Object.keys(NOMBRE).map(k => `<option value="${k}" ${f.tipo === k ? 'selected' : ''}>${NOMBRE[k]}</option>`).join('')}</select></div>
       <div><label>Producto</label><select id="p"><option value="">Todos</option>${lista.map(x => `<option ${f.producto === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div><button id="go">Actualizar</button><button class="sec np" id="pdf">Descargar PDF</button><button class="sec np" id="mail">Enviar por correo</button><span id="msg" class="np"></span></div>
       <div class="kpis"><div class="kpi"><span>Ventas</span><b>${pesos(T.ventas)}</b></div><div class="kpi"><span>Pedidos</span><b>${T.pedidos}</b></div><div class="kpi"><span>Ticket promedio</span><b>${pesos(T.ticket)}</b></div>
-      <div class="kpi"><span>Efectivo / transferencia</span><b>${pesos(T.efectivo)} / ${pesos(T.transferencia)}</b></div><div class="kpi"><span>Envíos sin cargo</span><b>${T.sinCargo}</b><span>${pesos(T.sinCargoMonto)} desde la caja</span></div></div>
+      <div class="kpi"><span>Efectivo / transferencia</span><b>${pesos(T.efectivo)} / ${pesos(T.transferencia)}</b></div><div class="kpi"><span>Envíos sin cargo</span><b>${T.sinCargo}</b><span>${pesos(T.sinCargoMonto)} desde la caja</span></div>
+      <div class="kpi"><span>Corresponde al socio</span><b>${pesos(T.socio.corresponde)}</b><span>Pagado ${pesos(T.socio.pagado)}, saldo ${pesos(T.socio.saldo)}</span></div><div class="kpi"><span>Nuestra parte</span><b>${pesos(T.socio.propia)}</b></div></div>
       <div class="gr"><div class="box"><h2>Ventas por día</h2><div class="dias">${r.dias.map(d => `<div title="${d.f}: ${pesos(d.m)}"><i style="height:${Math.max(2, d.m / mx * 100)}%"></i>${d.f.slice(8)}/${d.f.slice(5, 7)}</div>`).join('') || '<p style="color:var(--tenue)">Sin datos.</p>'}</div></div>
       <div class="box"><h2>Ventas por tipo de entrega</h2>${barras(r.tipos.map(x => ({ n: NOMBRE[x.n] || x.n, m: x.m })), pesos)}</div>
       <div class="box"><h2>Productos más vendidos</h2>${barras(r.productos.map(x => ({ n: x.n, m: x.cant })), x => x + ' u.')}</div>
@@ -129,6 +130,7 @@ function tablero(root) {
     vista.innerHTML = `<div class="box"><h2>Planillas en uso (pegá el enlace o el ID de cada una; tienen que ser hojas de cálculo de Google)</h2>
       <label style="color:var(--tenue)">Operacion_CDBF</label><input id="op" style="width:100%" placeholder="Enlace o ID"><p>${est(r.op)}</p>
       <label style="color:var(--tenue)">LISTA OFICIAL (la actualizada con las últimas ventas)</label><input id="lo" style="width:100%" placeholder="Enlace o ID"><p>${est(r.lo)}</p>
+      ${(r.avisos || []).length ? `<p class="err">Revisá catalogo_socio:<br>${r.avisos.map(esc).join('<br>')}</p>` : ''}
       <button id="gp">Guardar y verificar</button> <span id="mp">${esc(aviso)}</span></div>`;
     $('#gp').onclick = async () => {
       const g = await api('admin_planillas_guardar', { token, op: $('#op').value.trim(), lo: $('#lo').value.trim() });
