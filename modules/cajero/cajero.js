@@ -123,7 +123,7 @@ function carga(el, D, ses, mon) {
   const S = { tipo: 'SALON', items: {} }, $ = q => el.querySelector(q), val = q => ($(q)?.value || '').trim();
   const NOMBRES = { SALON: 'Salón', RETIRO: 'Retiro', DELIVERY: 'Delivery' };
   el.innerHTML = `<h2>Carga de pedidos</h2><div class="tp">${Object.keys(NOMBRES).map(t => `<button data-t="${t}">${NOMBRES[t]}</button>`).join('')}</div>
-    <div id="mesas"></div><div class="fl" id="dat"></div><input id="q" placeholder="Buscar producto…" autocomplete="off"><div class="rs" id="res"></div>
+    <div id="mesas"></div><div class="fl" id="dat"></div><div class="tp"><button class="sec" data-f="COMIDA">Comidas</button><button class="sec" data-f="BEBIDA">Bebidas</button><button class="sec" data-f="COMBO">Combos</button></div><input id="q" placeholder="Buscar producto…" autocomplete="off"><div class="rs" id="res"></div>
     <div id="car"></div><div class="tt" id="tt"></div><div id="pago"></div><p class="err" id="er"></p><button id="env">Enviar a cocina</button>
     <datalist id="cl">${D.clientes.map(c => `<option value="${esc(c.n)}">`).join('')}</datalist>`;
 
@@ -177,14 +177,20 @@ function carga(el, D, ses, mon) {
     };
   };
 
-  $('#q').oninput = () => {
-    const q = val('#q').toUpperCase(), L = q ? D.catalogo.filter(p => p.disp && (p.n.toUpperCase().includes(q) || p.cat.includes(q))).slice(0, 8) : [];
+  const buscar = () => {
+    const q = val('#q').toUpperCase(), f = S.filtro, base = D.catalogo.filter(p => p.disp && (!f || p.t === f));
+    const L = (q ? base.filter(p => p.n.toUpperCase().includes(q) || p.cat.includes(q)) : f ? base : []).slice(0, 12);
     $('#res').innerHTML = L.map(p => `<button class="sec" data-n="${esc(p.n)}"><span>${esc(p.n)} <small>${esc(p.cat)}</small></span><span>${pesos(p.p)}</span></button>`).join('');
     $('#res').querySelectorAll('button').forEach(b => b.onclick = () => {
       const p = D.catalogo.find(x => x.n === b.dataset.n); (S.items[p.n] ??= { ...p, c: 0, o: '' }).c++;
       $('#q').value = ''; $('#res').innerHTML = ''; lineas();
     });
   };
+  $('#q').oninput = buscar;
+  el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
+    S.filtro = S.filtro === b.dataset.f ? '' : b.dataset.f;
+    el.querySelectorAll('[data-f]').forEach(x => x.className = x.dataset.f === S.filtro ? 'on' : 'sec'); buscar();
+  });
 
   $('#env').onclick = async () => {
     const err = $('#er'); err.className = 'err'; err.textContent = '';
@@ -193,7 +199,7 @@ function carga(el, D, ses, mon) {
       items: Object.values(S.items).map(i => ({ n: i.n, c: i.c, o: i.o })), usuario: ses.nombre, ...(S.pago ? S.pago() : {}) });
     if (r.error) { err.textContent = { pedido_vacio: 'Agregá al menos un producto.', faltan_datos: 'Completá la mesa o el nombre del cliente.', faltan_datos_de_envio: 'Para delivery cargá teléfono y dirección.', falta_metodo_pago: 'Elegí el método de pago.', telefono_invalido: 'El teléfono tiene que tener 10 dígitos, sin 0 ni 15.' }[r.error] || 'No se pudo enviar: ' + r.error; return; }
     S.items = {}; datos(); lineas();
-    err.className = 'ok'; err.textContent = `Pedido ${r.id_cuenta} enviado a cocina (tanda ${r.tanda}).${r.vuelto ? ' Vuelto: ' + pesos(r.vuelto) : ''}`;
+    err.className = 'ok'; err.textContent = `Pedido ${r.id_cuenta} registrado${r.tanda ? ' y enviado a cocina (tanda ' + r.tanda + ')' : ' (solo bebidas: no pasa por cocina)'}.${r.vuelto ? ' Vuelto: ' + pesos(r.vuelto) : ''}`;
   };
   tipo('SALON'); lineas();
   return { mesas };
@@ -210,12 +216,13 @@ async function cierre(root, ses) {
     <label>Transferencias recibidas</label><input id="tr" type="number" inputmode="numeric" placeholder="Total de transferencias">
     <label>Gastos</label><div id="gs"></div><button class="sec" id="mg" style="margin-top:.5rem">Agregar gasto</button>
     ${C.pagos.length ? `<label>Pagos a repartidores (salen de la caja)</label>${C.pagos.map(x => `<div class="tot" style="margin:.2rem 0"><span>${esc(x.n)}</span><span>${pesos(x.monto)}</span></div>`).join('')}` : ''}
+    ${C.socio ? `<label>Corresponde al socio de bebidas hoy: <b>${pesos(C.socio)}</b></label><input id="ps" type="number" inputmode="numeric" placeholder="Pago al socio en efectivo (opcional)">` : '<input id="ps" type="hidden" value="0">'}
     <div id="bal" class="tt"></div><p class="err"></p><div id="acc"><button id="cer">Cerrar ventas</button><button class="sec" id="vol" style="margin-top:.6rem">Volver a la caja</button></div>`;
   volver();
   const leer = () => {
     const bil = {}; q('[data-d]').forEach(i => bil[i.dataset.d] = +i.value || 0);
     const gastos = [...q('#gs .gr')].map(r => { const [c, m] = r.querySelectorAll('input'); return { concepto: c.value.trim(), monto: +m.value || 0 }; });
-    return { bil, gastos, contado: DEN.reduce((t, d) => t + d * (bil[d] || 0), 0), gm: gastos.filter(g => g.concepto && g.monto > 0).reduce((t, g) => t + g.monto, 0) };
+    return { bil, gastos, contado: DEN.reduce((t, d) => t + d * (bil[d] || 0), 0), gm: gastos.filter(g => g.concepto && g.monto > 0).reduce((t, g) => t + g.monto, 0) + (+box.querySelector('#ps').value || 0) };
   };
   const bal = () => {
     const L = leer(), esp = C.apertura + C.efvo + C.rendido - C.gastos - L.gm - pagos, dif = L.contado - esp, dt = (+box.querySelector('#tr').value || 0) - C.transf;
@@ -224,12 +231,12 @@ async function cierre(root, ses) {
       <div class="g"><span>Efectivo</span><span class="${dif === 0 ? 'ok' : ''}">${txt(dif)}</span></div><div><span>Transferencias en el sistema</span><span>${pesos(C.transf)}</span></div><div><span>Transferencias declaradas</span><span class="${dt === 0 ? 'ok' : ''}">${txt(dt)}</span></div>`;
   };
   const mas = () => { box.querySelector('#gs').insertAdjacentHTML('beforeend', '<div class="gr" style="margin-top:.4rem"><input placeholder="Concepto"><input type="number" inputmode="numeric" placeholder="Monto"></div>'); box.querySelectorAll('#gs input').forEach(i => i.oninput = bal); };
-  box.querySelector('#mg').onclick = mas; q('[data-d],#tr').forEach(i => i.oninput = bal); mas(); bal();
+  box.querySelector('#mg').onclick = mas; q('[data-d],#tr,#ps').forEach(i => i.oninput = bal); mas(); bal();
   box.querySelector('#cer').onclick = () => {
     box.querySelector('#acc').innerHTML = '<p><b>¿Estás seguro que querés cerrar?</b></p><div class="tp" style="grid-template-columns:1fr 1fr"><button id="si">Sí</button><button class="sec" id="no">No</button></div>';
     box.querySelector('#no').onclick = () => cierre(root, ses);
     box.querySelector('#si').onclick = async () => {
-      const L = leer(), r = await api('cerrar_jornada', { nombre: ses.nombre, billetes: L.bil, gastos: L.gastos, transferencias: +box.querySelector('#tr').value || 0 });
+      const L = leer(), r = await api('cerrar_jornada', { nombre: ses.nombre, billetes: L.bil, gastos: L.gastos, transferencias: +box.querySelector('#tr').value || 0, pagoSocio: +box.querySelector('#ps').value || 0 });
       if (r.error) { alert(r.error === 'hay_pendientes' ? 'Apareció algo pendiente: revisá la caja antes de cerrar.' : 'No se pudo cerrar: ' + r.error); return cierre(root, ses); }
       box.innerHTML = `<h1>Jornada cerrada</h1><div class="tt"><div><span>Efectivo esperado</span><span>${pesos(r.esperado)}</span></div><div><span>Efectivo contado</span><span>${pesos(r.contado)}</span></div><div class="g"><span>Diferencia</span><span>${pesos(r.diferencia)}</span></div></div><button id="fin">Listo</button>`;
       box.querySelector('#fin').onclick = () => { sessionStorage.removeItem('cajero'); login(root); };
