@@ -124,7 +124,7 @@ function carga(el, D, ses, mon) {
   const NOMBRES = { SALON: 'Salón', RETIRO: 'Retiro', DELIVERY: 'Delivery' };
   el.innerHTML = `<h2>Carga de pedidos</h2><div class="tp">${Object.keys(NOMBRES).map(t => `<button data-t="${t}">${NOMBRES[t]}</button>`).join('')}</div>
     <div id="mesas"></div><div class="fl" id="dat"></div><div class="tp"><button class="sec" data-f="COMIDA">Comidas</button><button class="sec" data-f="BEBIDA">Bebidas</button><button class="sec" data-f="COMBO">Combos</button></div><input id="q" placeholder="Buscar producto…" autocomplete="off"><div class="rs" id="res"></div>
-    <div id="car"></div><div class="tt" id="tt"></div><div id="pago"></div><p class="err" id="er"></p><button id="env">Enviar a cocina</button>
+    <div id="car"></div><div class="tt" id="tt"></div><div id="pago"></div><p class="err" id="er"></p><button id="env">CARGAR PEDIDO</button>
     <datalist id="cl">${D.clientes.map(c => `<option value="${esc(c.n)}">`).join('')}</datalist>`;
 
   const calc = () => {
