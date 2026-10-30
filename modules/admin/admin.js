@@ -32,9 +32,9 @@ function login(root, aviso = '') {
 function tablero(root) {
   const token = sessionStorage.getItem('admin_t'), hoy = new Date(), iso = d => d.toISOString().slice(0, 10);
   const salir = () => { sessionStorage.removeItem('admin_t'); login(root); };
-  root.innerHTML = `<style>${CSS}</style><div class="ad"><div class="bar np"><h1 style="margin:0;flex:1">Admin</h1><button class="sec" id="t1">Reportes</button><button class="sec" id="t2">Catálogo</button><button class="sec" id="t3">Puntos extra</button><button class="sec" id="t4">Repartidores hoy</button><button class="sec" id="t5">Planillas</button><button class="sec" id="t6">Seguridad</button><button class="sec" id="t7">Stock</button><button class="sec" id="out">Salir</button></div><div id="vista"></div></div>`;
+  root.innerHTML = `<style>${CSS}</style><div class="ad"><div class="bar np"><h1 style="margin:0;flex:1">Admin</h1><button class="sec" id="t1">Reportes</button><button class="sec" id="t2">Catálogo</button><button class="sec" id="t3">Puntos extra</button><button class="sec" id="t4">Repartidores hoy</button><button class="sec" id="t5">Planillas</button><button class="sec" id="t6">Seguridad</button><button class="sec" id="t7">Stock</button><button class="sec" id="t8">Fecha y hora</button><button class="sec" id="out">Salir</button></div><div id="vista"></div></div>`;
   const $ = q => root.querySelector(q), vista = $('#vista');
-  $('#out').onclick = salir; $('#t1').onclick = () => reportes(); $('#t2').onclick = catalogo; $('#t3').onclick = puntos; $('#t4').onclick = repartidores; $('#t5').onclick = planillas; $('#t6').onclick = seguridad; $('#t7').onclick = stock;
+  $('#out').onclick = salir; $('#t1').onclick = () => reportes(); $('#t2').onclick = catalogo; $('#t3').onclick = puntos; $('#t4').onclick = repartidores; $('#t5').onclick = planillas; $('#t6').onclick = seguridad; $('#t7').onclick = stock; $('#t8').onclick = hora;
 
   const barras = (L, fmt) => { const mx = Math.max(1, ...L.map(x => x.m)); return L.map(x => `<div class="row"><span>${esc(x.n)}</span><i style="width:${Math.max(2, x.m / mx * 100)}%"></i><b>${fmt(x.m)}</b></div>`).join('') || '<p style="color:var(--tenue)">Sin datos en este período.</p>'; };
 
@@ -56,7 +56,7 @@ function tablero(root) {
       <div class="box"><h2>Tiempos promedio</h2><div class="row"><span>Espera en cocina</span><i style="width:${Math.min(100, r.tiempos.espera * 3)}%"></i><b>${r.tiempos.espera} min</b></div><div class="row"><span>Preparación</span><i style="width:${Math.min(100, r.tiempos.prep * 3)}%"></i><b>${r.tiempos.prep} min</b></div><div class="row"><span>Reparto</span><i style="width:${Math.min(100, r.tiempos.reparto * 3)}%"></i><b>${r.tiempos.reparto} min</b></div></div></div>
       <div class="box" style="margin-top:.8rem;overflow-x:auto"><h2>Repartidores (en el período, sin filtrar por tipo ni producto)</h2><table><tr><th>Nombre</th><th>Envíos</th><th>Sin cargo</th><th>Básico</th><th>Total pagado</th><th>Dif. rendiciones</th></tr>
       ${r.repartidores.map(x => `<tr><td>${esc(x.n)}</td><td>${x.envios}</td><td>${x.sc}</td><td>${pesos(x.basico)}</td><td>${pesos(x.total)}</td><td>${pesos(x.dif)}</td></tr>`).join('') || '<tr><td colspan="6">Sin datos.</td></tr>'}</table></div>`;
-    const filtros = () => ({ desde: $('#d').value, hasta: $('#h').value, tipo: $('#t').value, producto: $('#p').value });
+    const filtros = () => ({ desde: $('#d').value, hasta: $('#h').value, tipo: $('#t').value, categoria: $('#c').value });
     $('#go').onclick = () => reportes(filtros(), lista);
     $('#pdf').onclick = () => window.print();
     $('#mail').onclick = async () => {
@@ -141,6 +141,27 @@ function tablero(root) {
       if (x.error) { $('#enl').innerHTML = `<p class="err">${x.error === 'clave_corta' ? 'La clave tiene que tener al menos 8 caracteres.' : 'No se pudo guardar: ' + esc(x.error)}</p>`; return; }
       localStorage.setItem('cdbf_k', clave);
       $('#enl').innerHTML = '<h2>Enlaces para enviar</h2>' + ['cocina', 'cajero', 'delivery', 'admin'].map(a => `<p><b>${a[0].toUpperCase() + a.slice(1)}</b><br><code style="word-break:break-all">${esc(base + a + '.html?k=' + clave)}</code></p>`).join('');
+    };
+  }
+
+  async function hora(aviso = '') {
+    const r = await api('admin_hora', { token });
+    if (r.error === 'no_autorizado') return salir();
+    if (r.error) { vista.innerHTML = `<div class="box"><p class="err">No se pudo leer la hora (${esc(r.error)}).</p></div>`; return; }
+    vista.innerHTML = `<div class="box"><h2>Fecha y hora del sistema</h2>
+      <p>Hora del sistema: <b>${esc(r.sistema)}</b> <span style="color:var(--tenue)">(Buenos Aires)</span></p>
+      <p style="color:var(--tenue)">Hora de este dispositivo: ${esc(new Date().toLocaleString('es-AR'))}</p>
+      <p>Modo actual: <b>${r.modo === 'AUTO' ? 'Automático (reloj de Google por red)' : 'Manual'}</b></p>
+      ${r.jornada ? '<p class="err">Hay una jornada abierta: para cambiar la hora, primero cerrá la caja.</p>' : ''}
+      <div class="bar"><div><label>Modo</label><select id="md"><option value="AUTO">Automático (por red)</option><option value="MANUAL">Manual</option></select></div>
+        <div><label>Fecha</label><input type="date" id="fd" value="${r.sistema.slice(0, 10)}"></div><div><label>Hora</label><input type="time" id="hh" value="${r.sistema.slice(11, 16)}"></div>
+        <button id="gh">Guardar</button></div><p id="mh">${esc(aviso)}</p></div>`;
+    const sync = () => { const m = $('#md').value === 'MANUAL'; $('#fd').disabled = !m; $('#hh').disabled = !m; };
+    $('#md').value = r.modo; sync(); $('#md').onchange = sync;
+    $('#gh').onclick = async () => {
+      const g = await api('admin_hora_guardar', { token, modo: $('#md').value, fecha: $('#fd').value, hora: $('#hh').value });
+      if (g.error === 'no_autorizado') return salir();
+      hora(g.ok ? 'Guardado.' : ({ jornada_abierta: 'Cerrá la caja antes de cambiar la hora.', fecha_invalida: 'Completá una fecha y una hora válidas.' }[g.error] || 'No se pudo guardar: ' + g.error));
     };
   }
 
