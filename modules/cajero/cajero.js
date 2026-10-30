@@ -108,7 +108,7 @@ async function panel(root, ses) {
     if (!$('#mc')) return;
     const r = await api('cajero_monitor', { v });
     if (r.error || r.sin_cambios) return;
-    v = r.v; R = r; mon.mesas = r.mesas; ctl.mesas();
+    v = r.v; R = r; mon.mesas = r.mesas; mon.stock = r.stock; ctl.mesas();
     const ls = new Set(r.cocina.filter(t => t.estado === 'LISTA').map(t => t.id));
     if (listos) { const nuevos = [...ls].filter(x => !listos.has(x)); if (nuevos.length) { beep(); nuevos.forEach(x => { flash.add(x); setTimeout(() => { flash.delete(x); pintar(); }, 8000); }); } }
     listos = ls;
@@ -144,9 +144,9 @@ function carga(el, D, ses, mon) {
       <div class="g"><span>Total</span><span>${pesos(c.total)}</span></div>`;
   };
   const lineas = () => {
-    $('#car').innerHTML = Object.values(S.items).map(i => `<div class="ln"><b>${esc(i.n)}</b><div class="q"><button class="sec" data-m="${esc(i.n)}">-</button>${i.c}<button class="sec" data-p="${esc(i.n)}">+</button></div>
-      <input data-o="${esc(i.n)}" placeholder="Nota para cocina" value="${esc(i.o)}"><span>${pesos(i.p * i.c)}</span></div>`).join('');
-    $('#car').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const i = S.items[b.dataset.m]; if (--i.c <= 0) delete S.items[i.n]; lineas(); });
+    $('#car').innerHTML = Object.values(S.items).map(i => `<div class="ln"><b>${esc(i.n)}${i.op ? ' (' + esc(i.op) + ')' : ''}</b><div class="q"><button class="sec" data-m="${esc(i.k || i.n)}">-</button>${i.c}<button class="sec" data-p="${esc(i.k || i.n)}">+</button></div>
+      <input data-o="${esc(i.k || i.n)}" placeholder="Nota para cocina" value="${esc(i.o)}"><span>${pesos(i.p * i.c)}</span></div>`).join('');
+    $('#car').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const i = S.items[b.dataset.m]; if (--i.c <= 0) delete S.items[i.k || i.n]; lineas(); });
     $('#car').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { S.items[b.dataset.p].c++; lineas(); });
     $('#car').querySelectorAll('[data-o]').forEach(b => b.oninput = () => S.items[b.dataset.o].o = b.value);
     totales();
@@ -177,13 +177,25 @@ function carga(el, D, ses, mon) {
     };
   };
 
+  const stk = n => (mon.stock || D.stock || {})[String(n).toUpperCase()];
+  const agotado = n => { const st = stk(n); return !!st && st.stock <= 0 && D.bloq; };
+  const nota = n => { const st = stk(n); return st ? (st.stock <= 0 ? 'sin stock' : (st.minimo !== '' && st.stock <= st.minimo ? 'quedan pocas: ' : 'quedan ') + (st.stock <= 0 ? '' : st.stock)) : ''; };
+  const agregar = (p, op) => {
+    const k = op ? p.n + ' / ' + op : p.n; (S.items[k] ??= { ...p, k, op: op || '', c: 0, o: '' }).c++;
+    $('#q').value = ''; $('#res').innerHTML = ''; lineas();
+  };
   const buscar = () => {
     const q = val('#q').toUpperCase(), f = S.filtro, base = D.catalogo.filter(p => p.disp && (!f || p.t === f));
     const L = (q ? base.filter(p => p.n.toUpperCase().includes(q) || p.cat.includes(q)) : f ? base : []).slice(0, 12);
-    $('#res').innerHTML = L.map(p => `<button class="sec" data-n="${esc(p.n)}"><span>${esc(p.n)} <small>${esc(p.cat)}</small></span><span>${pesos(p.p)}</span></button>`).join('');
+    $('#res').innerHTML = L.map(p => `<button class="sec" data-n="${esc(p.n)}" ${p.t === 'BEBIDA' && agotado(p.n) ? 'disabled' : ''}><span>${esc(p.n)} <small>${esc(p.cat)}${p.t === 'BEBIDA' && stk(p.n) ? ', ' + nota(p.n) : ''}</small></span><span>${pesos(p.p)}</span></button>`).join('');
     $('#res').querySelectorAll('button').forEach(b => b.onclick = () => {
-      const p = D.catalogo.find(x => x.n === b.dataset.n); (S.items[p.n] ??= { ...p, c: 0, o: '' }).c++;
-      $('#q').value = ''; $('#res').innerHTML = ''; lineas();
+      const p = D.catalogo.find(x => x.n === b.dataset.n), ops = p.ops || [];
+      if (ops.length > 1) {
+        $('#res').innerHTML = '<h2>¿Qué bebida lleva?</h2>' + ops.map(o => `<button class="sec" data-o2="${esc(o)}" ${agotado(o) ? 'disabled' : ''}><span>${esc(o)}</span><span>${stk(o) ? nota(o) : ''}</span></button>`).join('');
+        $('#res').querySelectorAll('[data-o2]').forEach(x => x.onclick = () => agregar(p, x.dataset.o2));
+        return;
+      }
+      agregar(p, ops[0] || '');
     });
   };
   $('#q').oninput = buscar;
@@ -196,8 +208,9 @@ function carga(el, D, ses, mon) {
     const err = $('#er'); err.className = 'err'; err.textContent = '';
     if (S.tipo === 'DELIVERY' && val('#tel').replace(/\D/g, '').length !== 10) { err.textContent = 'El teléfono tiene que tener 10 dígitos: código de área y número, sin 0 ni 15 (ej. 3794123456).'; return; }
     const r = await api('crear_pedido', { tipo: S.tipo, mesa: val('#mesa'), cliente: val('#nom'), telefono: val('#tel'), direccion: val('#dir'), envio: val('#mon'),
-      items: Object.values(S.items).map(i => ({ n: i.n, c: i.c, o: i.o })), usuario: ses.nombre, ...(S.pago ? S.pago() : {}) });
-    if (r.error) { err.textContent = { pedido_vacio: 'Agregá al menos un producto.', faltan_datos: 'Completá la mesa o el nombre del cliente.', faltan_datos_de_envio: 'Para delivery cargá teléfono y dirección.', falta_metodo_pago: 'Elegí el método de pago.', telefono_invalido: 'El teléfono tiene que tener 10 dígitos, sin 0 ni 15.' }[r.error] || 'No se pudo enviar: ' + r.error; return; }
+      items: Object.values(S.items).map(i => ({ n: i.n, c: i.c, o: i.o, op: i.op })), usuario: ses.nombre, ...(S.pago ? S.pago() : {}) });
+    if (r.error === 'sin_stock') { err.textContent = `No hay stock suficiente de ${r.producto} (quedan ${r.quedan}).`; return; }
+    if (r.error) { err.textContent = { pedido_vacio: 'Agregá al menos un producto.', faltan_datos: 'Completá la mesa o el nombre del cliente.', faltan_datos_de_envio: 'Para delivery cargá teléfono y dirección.', falta_bebida: 'Elegí la bebida de cada combo.', falta_metodo_pago: 'Elegí el método de pago.', telefono_invalido: 'El teléfono tiene que tener 10 dígitos, sin 0 ni 15.' }[r.error] || 'No se pudo enviar: ' + r.error; return; }
     S.items = {}; datos(); lineas();
     err.className = 'ok'; err.textContent = `Pedido ${r.id_cuenta} registrado${r.tanda ? ' y enviado a cocina (tanda ' + r.tanda + ')' : ' (solo bebidas: no pasa por cocina)'}.${r.vuelto ? ' Vuelto: ' + pesos(r.vuelto) : ''}`;
   };
