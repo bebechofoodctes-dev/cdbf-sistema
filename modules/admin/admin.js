@@ -21,34 +21,20 @@ export function mount(root) {
 function login(root, aviso = '') {
   root.innerHTML = `<style>${CSS}</style><div class="ad"><div class="pin"><h1>Admin</h1><p style="color:var(--tenue)">Ingresá tu PIN</p>
     <input id="pin" type="password" inputmode="text" autocomplete="off"><p class="err">${esc(aviso)}</p><button id="ok" style="width:100%">Entrar</button></div></div>`;
-  
-  const pinInput = root.querySelector('#pin');
-  const btnOk = root.querySelector('#ok');
-
-  // Forzar el foco de manera segura usando setTimeout para asegurar que el DOM ya se pintó
-  setTimeout(() => {
-    pinInput.focus();
-    pinInput.click(); // Ayuda en algunos navegadores móviles a invocar el teclado virtual
-  }, 50);
-
   const entrar = async () => {
-    const r = await api('admin_login', { pin: pinInput.value });
+    const r = await api('admin_login', { pin: root.querySelector('#pin').value });
     if (r.ok) { sessionStorage.setItem('admin_t', r.token); return tablero(root); }
     login(root, { pin_incorrecto: 'PIN incorrecto.', bloqueado: 'Demasiados intentos. Esperá 5 minutos.', pin_no_configurado: 'Todavía no definiste el PIN (función definirPin en Apps Script).' }[r.error] || 'No se pudo conectar.');
   };
-
-  btnOk.onclick = entrar; 
-  pinInput.onkeydown = e => {
-    if (e.key === 'Enter') entrar();
-  };
+  root.querySelector('#ok').onclick = entrar; root.querySelector('#pin').onkeydown = e => e.key === 'Enter' && entrar();
 }
 
 function tablero(root) {
   const token = sessionStorage.getItem('admin_t'), hoy = new Date(), iso = d => d.toISOString().slice(0, 10);
   const salir = () => { sessionStorage.removeItem('admin_t'); login(root); };
-  root.innerHTML = `<style>${CSS}</style><div class="ad"><div class="bar np"><h1 style="margin:0;flex:1">Admin</h1><button class="sec" id="t1">Reportes</button><button class="sec" id="t2">Catálogo</button><button class="sec" id="t3">Puntos extra</button><button class="sec" id="t4">Repartidores hoy</button><button class="sec" id="t5">Planillas</button><button class="sec" id="t6">Seguridad</button><button class="sec" id="out">Salir</button></div><div id="vista"></div></div>`;
+  root.innerHTML = `<style>${CSS}</style><div class="ad"><div class="bar np"><h1 style="margin:0;flex:1">Admin</h1><button class="sec" id="t1">Reportes</button><button class="sec" id="t2">Catálogo</button><button class="sec" id="t3">Puntos extra</button><button class="sec" id="t4">Repartidores hoy</button><button class="sec" id="t5">Planillas</button><button class="sec" id="t6">Seguridad</button><button class="sec" id="t7">Stock</button><button class="sec" id="out">Salir</button></div><div id="vista"></div></div>`;
   const $ = q => root.querySelector(q), vista = $('#vista');
-  $('#out').onclick = salir; $('#t1').onclick = () => reportes(); $('#t2').onclick = catalogo; $('#t3').onclick = puntos; $('#t4').onclick = repartidores; $('#t5').onclick = planillas; $('#t6').onclick = seguridad;
+  $('#out').onclick = salir; $('#t1').onclick = () => reportes(); $('#t2').onclick = catalogo; $('#t3').onclick = puntos; $('#t4').onclick = repartidores; $('#t5').onclick = planillas; $('#t6').onclick = seguridad; $('#t7').onclick = stock;
 
   const barras = (L, fmt) => { const mx = Math.max(1, ...L.map(x => x.m)); return L.map(x => `<div class="row"><span>${esc(x.n)}</span><i style="width:${Math.max(2, x.m / mx * 100)}%"></i><b>${fmt(x.m)}</b></div>`).join('') || '<p style="color:var(--tenue)">Sin datos en este período.</p>'; };
 
@@ -155,6 +141,22 @@ function tablero(root) {
       if (x.error) { $('#enl').innerHTML = `<p class="err">${x.error === 'clave_corta' ? 'La clave tiene que tener al menos 8 caracteres.' : 'No se pudo guardar: ' + esc(x.error)}</p>`; return; }
       localStorage.setItem('cdbf_k', clave);
       $('#enl').innerHTML = '<h2>Enlaces para enviar</h2>' + ['cocina', 'cajero', 'delivery', 'admin'].map(a => `<p><b>${a[0].toUpperCase() + a.slice(1)}</b><br><code style="word-break:break-all">${esc(base + a + '.html?k=' + clave)}</code></p>`).join('');
+    };
+  }
+
+  async function stock(aviso = '') {
+    vista.innerHTML = '<p>Leyendo stock…</p>';
+    const r = await api('admin_stock', { token });
+    if (r.error === 'no_autorizado') return salir();
+    if (r.error) { vista.innerHTML = `<div class="box"><p class="err">No se pudo leer el stock (${esc(r.error)}).</p></div>`; return; }
+    vista.innerHTML = `<div class="box"><h2>Stock de bebidas (dejá vacío lo que no quieras controlar)</h2><table><tr><th>Producto</th><th>Disponible</th><th>Avisar si baja de</th></tr>
+      ${r.items.map((x, i) => `<tr class="${x.stock !== '' && x.stock <= 0 ? 'off' : ''}"><td>${esc(x.n)}</td><td><input type="number" min="0" id="s${i}" value="${x.stock}"></td><td><input type="number" min="0" id="m${i}" value="${x.minimo}"></td></tr>`).join('') || '<tr><td colspan="3">No hay bebidas en catalogo_socio.</td></tr>'}</table>
+      <div class="bar" style="margin-top:.8rem"><button id="gs">Guardar stock</button><button class="sec" id="rf">Actualizar</button><span>${esc(aviso)}</span></div></div>`;
+    $('#rf').onclick = () => stock();
+    $('#gs').onclick = async () => {
+      const g = await api('admin_stock_guardar', { token, items: r.items.map((x, i) => ({ n: x.n, stock: $('#s' + i).value, minimo: $('#m' + i).value })) });
+      if (g.error === 'no_autorizado') return salir();
+      stock(g.ok ? 'Stock guardado.' : 'No se pudo guardar: ' + g.error);
     };
   }
   reportes();
