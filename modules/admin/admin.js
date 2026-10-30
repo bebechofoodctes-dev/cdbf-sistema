@@ -56,7 +56,7 @@ function tablero(root) {
       <div class="box"><h2>Tiempos promedio</h2><div class="row"><span>Espera en cocina</span><i style="width:${Math.min(100, r.tiempos.espera * 3)}%"></i><b>${r.tiempos.espera} min</b></div><div class="row"><span>Preparación</span><i style="width:${Math.min(100, r.tiempos.prep * 3)}%"></i><b>${r.tiempos.prep} min</b></div><div class="row"><span>Reparto</span><i style="width:${Math.min(100, r.tiempos.reparto * 3)}%"></i><b>${r.tiempos.reparto} min</b></div></div></div>
       <div class="box" style="margin-top:.8rem;overflow-x:auto"><h2>Repartidores (en el período, sin filtrar por tipo ni producto)</h2><table><tr><th>Nombre</th><th>Envíos</th><th>Sin cargo</th><th>Básico</th><th>Total pagado</th><th>Dif. rendiciones</th></tr>
       ${r.repartidores.map(x => `<tr><td>${esc(x.n)}</td><td>${x.envios}</td><td>${x.sc}</td><td>${pesos(x.basico)}</td><td>${pesos(x.total)}</td><td>${pesos(x.dif)}</td></tr>`).join('') || '<tr><td colspan="6">Sin datos.</td></tr>'}</table></div>`;
-    const filtros = () => ({ desde: $('#d').value, hasta: $('#h').value, tipo: $('#t').value, categoria: $('#c').value });
+    const filtros = () => ({ desde: $('#d').value, hasta: $('#h').value, tipo: $('#t').value, producto: $('#p').value });
     $('#go').onclick = () => reportes(filtros(), lista);
     $('#pdf').onclick = () => window.print();
     $('#mail').onclick = async () => {
