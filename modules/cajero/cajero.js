@@ -1,4 +1,4 @@
-import { api } from '../../core/api.js';
+import { api, ahora } from '../../core/api.js';
 
 const DEN = [10, 20, 50, 100, 200, 500, 1000, 2000, 10000, 20000];
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -20,7 +20,7 @@ let ctx, timers = [];
 function beep() {
   try { ctx ??= new AudioContext(); ctx.resume(); const o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; g.gain.value = .2; o.start(); o.stop(ctx.currentTime + .25); } catch { /* sin audio */ }
 }
-const hace = x => Math.max(0, (Date.now() - new Date(String(x).replace(' ', 'T'))) / 60000 | 0) + ' min';
+const hace = x => Math.max(0, (ahora() - new Date(String(x).replace(' ', 'T') + '-03:00')) / 60000 | 0) + ' min';
 
 // Controles de pago: efectivo (con "paga con"), transferencia o mixto. Devuelve una función que lee lo elegido.
 function pagoUI(box) {
