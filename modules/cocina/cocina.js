@@ -1,4 +1,4 @@
-import { api } from '../../core/api.js';
+import { api, ahora } from '../../core/api.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const hora = s => (s || '').slice(11, 16);
@@ -84,7 +84,7 @@ function tablero(root, ses) {
 
   function tic() {
     root.querySelectorAll('.tm').forEach(e => {
-      const seg = Math.max(0, (Date.now() - new Date(e.dataset.d.replace(' ', 'T'))) / 1000 | 0), min = seg / 60;
+      const seg = Math.max(0, (ahora() - new Date(e.dataset.d.replace(' ', 'T') + '-03:00')) / 1000 | 0), min = seg / 60;
       e.textContent = `${min | 0}:${String(seg % 60).padStart(2, '0')}`;
       const c = e.closest('.c');
       c.classList.toggle('am', !!data.amarillo && min >= data.amarillo && !(data.rojo && min >= data.rojo));
