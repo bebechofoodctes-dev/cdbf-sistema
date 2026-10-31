@@ -21,12 +21,26 @@ export function mount(root) {
 function login(root, aviso = '') {
   root.innerHTML = `<style>${CSS}</style><div class="ad"><div class="pin"><h1>Admin</h1><p style="color:var(--tenue)">Ingresá tu PIN</p>
     <input id="pin" type="password" inputmode="text" autocomplete="off"><p class="err">${esc(aviso)}</p><button id="ok" style="width:100%">Entrar</button></div></div>`;
+  
+  const pinInput = root.querySelector('#pin');
+  const btnOk = root.querySelector('#ok');
+
+  // Forzar el foco de manera segura usando setTimeout para asegurar que el DOM ya se pintó
+  setTimeout(() => {
+    pinInput.focus();
+    pinInput.click(); // Ayuda en algunos navegadores móviles a invocar el teclado virtual
+  }, 50);
+
   const entrar = async () => {
-    const r = await api('admin_login', { pin: root.querySelector('#pin').value });
+    const r = await api('admin_login', { pin: pinInput.value });
     if (r.ok) { sessionStorage.setItem('admin_t', r.token); return tablero(root); }
     login(root, { pin_incorrecto: 'PIN incorrecto.', bloqueado: 'Demasiados intentos. Esperá 5 minutos.', pin_no_configurado: 'Todavía no definiste el PIN (función definirPin en Apps Script).' }[r.error] || 'No se pudo conectar.');
   };
-  root.querySelector('#ok').onclick = entrar; root.querySelector('#pin').onkeydown = e => e.key === 'Enter' && entrar();
+
+  btnOk.onclick = entrar; 
+  pinInput.onkeydown = e => {
+    if (e.key === 'Enter') entrar();
+  };
 }
 
 function tablero(root) {
