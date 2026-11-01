@@ -77,7 +77,8 @@ const CSS2 = `
 .stock-list{flex-grow:1;overflow-y:auto;margin-top:1rem}
 .stock-item{display:flex;justify-content:space-between;align-items:center;padding:.6rem;border-bottom:1px solid #2a3340}
 .stock-low{color:#f0b13c;font-weight:bold}
-.stock-ok{color:#56c48f;font-weight:bold}`;
+.stock-ok{color:#56c48f;font-weight:bold}
+.lbl-stock-cat{font-size:.8rem;padding:.15rem .4rem;border-radius:4px;display:inline-block;margin-left:.3rem}`;
 async function panel(root, ses) {
 timers.forEach(clearInterval); timers = [];
 root.innerHTML = `<style>${CSS}${CSS2}</style><div class="cj">
@@ -241,6 +242,15 @@ $('#car').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { S.items[
 $('#car').querySelectorAll('[data-o]').forEach(b => b.oninput = () => S.items[b.dataset.o].o = b.value);
 totales();
 };
+const autocompletarContactoCliente = () => {
+const nombreIngresado = val('#nom').toUpperCase();
+if (!nombreIngresado) return;
+const cli = D.clientes.find(c => c.n.toUpperCase() === nombreIngresado);
+if (cli) {
+if ($('#tel') && cli.tel && !val('#tel')) $('#tel').value = cli.tel;
+if ($('#dir') && cli.dir && !val('#dir')) $('#dir').value = cli.dir;
+}
+};
 const datos = () => {
 $('#dat').innerHTML = S.tipo === 'SALON' ? '<input id="mesa" placeholder="Mesa N°" inputmode="numeric">'
 : `<input id="nom" list="cl" placeholder="Nombre y apellido del cliente" autocomplete="off">
@@ -257,6 +267,7 @@ ${S.tipo === 'DELIVERY' ? `
 ` : ''}`;
 $('#dat').querySelectorAll('input').forEach(i => {
 i.oninput = () => {
+if (i.id === 'nom') autocompletarContactoCliente();
 if (i.id === 'km' && val('#km')) {
 const precioSugerido = obtenerPrecioEnvioCalculado(+val('#km'));
 if ($('#mon')) $('#mon').placeholder = `Sugerido: $${precioSugerido}`;
@@ -265,14 +276,9 @@ totales();
 };
 if (i.type === 'checkbox') i.onchange = totales;
 });
-// Autocompletado de datos del cliente al cambiar el nombre
 if ($('#nom')) {
 $('#nom').onchange = () => {
-const cli = D.clientes.find(c => c.n.toUpperCase() === val('#nom').toUpperCase());
-if (cli) {
-if ($('#tel') && cli.tel) $('#tel').value = cli.tel;
-if ($('#dir') && cli.dir) $('#dir').value = cli.dir;
-}
+autocompletarContactoCliente();
 totales();
 };
 }
@@ -298,8 +304,17 @@ cm.innerHTML = `<p class="ok">Mesa ${esc(mesa)} cobrada.${r.vuelto ? ' Vuelto: '
 };
 const buscar = () => {
 const q = val('#q').toUpperCase(), f = S.filtro, base = D.catalogo.filter(p => p.disp && (!f || p.t === f));
-const L = (q ? base.filter(p => p.n.toUpperCase().includes(q) || p.cat.includes(q)) : f ? base : []).slice(0, 12);
-$('#res').innerHTML = L.map(p => `<button class="sec" data-n="${esc(p.n)}"><span>${esc(p.n)} <small>${esc(p.cat)}</small></span><span>${pesos(p.p)}</span></button>`).join('');
+const L = (q ? base.filter(p => p.n.toUpperCase().includes(q) || p.cat.includes(q)) : f ? base : D.catalogo.filter(p => p.disp)).slice(0, 15);
+$('#res').innerHTML = L.map(p => {
+const infoStock = (D.stock && D.stock[p.n.toUpperCase()]) ? D.stock[p.n.toUpperCase()].stock : null;
+const tieneStock = infoStock !== null;
+const stockTxt = tieneStock ? `${infoStock} un.` : 'N/D';
+const estiloStock = tieneStock && infoStock <= 3 ? 'background:#f0b13c;color:#06121d' : 'background:#2d3846;color:#56c48f';
+return `<button class="sec" data-n="${esc(p.n)}">
+<span>${esc(p.n)} <small>${esc(p.cat)}</small><span class="lbl-stock-cat" style="${estiloStock}">${stockTxt}</span></span>
+<span>${pesos(p.p)}</span>
+</button>`;
+}).join('');
 $('#res').querySelectorAll('button').forEach(b => b.onclick = () => {
 const p = D.catalogo.find(x => x.n === b.dataset.n); (S.items[p.n] ??= { ...p, c: 0, o: '' }).c++;
 $('#q').value = ''; $('#res').innerHTML = ''; lineas();
@@ -372,5 +387,3 @@ box.querySelector('#fin').onclick = () => { sessionStorage.removeItem('cajero');
 };
 };
 }
-
-
