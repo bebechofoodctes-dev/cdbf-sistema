@@ -10,16 +10,18 @@ const CSS = `
 .gr{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}.gr div{display:flex;align-items:center;gap:.5rem}.gr b{min-width:4.5rem;text-align:right}
 .tot{display:flex;justify-content:space-between;font-size:1.3rem;font-weight:700;margin:1rem 0}.err{color:#f0b13c;min-height:1.4em}
 .ch{display:flex;justify-content:space-between;align-items:center;padding:.7rem 1.2rem;color:var(--tenue);border-bottom:1px solid #2a3340}
-.pn{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:.8rem;padding:.8rem;height:calc(100vh - 7rem)}
+.pn{display:grid;grid-template-columns:1.2fr 1fr;grid-template-rows:1fr 1fr;gap:.8rem;padding:.8rem;height:calc(100vh - 12rem)}
 .pn section{background:var(--card);border-radius:12px;padding:1rem;overflow:auto}.pn section:first-child{grid-row:1/3}
 .pn h2{margin:0 0 .5rem;font-size:1.1rem}.pn p{color:var(--tenue)}
-@media(max-width:900px){.pn{grid-template-columns:1fr;grid-template-rows:none;height:auto}.pn section:first-child{grid-row:auto}}`;
+.dash-delivery-horiz{grid-column:1/3;background:var(--card);border-radius:12px;padding:.8rem;height:10rem;overflow-x:auto}
+.track-repartidores{display:flex;gap:.8rem;overflow-x:auto;padding-bottom:.4rem}
+.card-rep{background:#151a22;border-radius:8px;padding:.6rem .8rem;min-width:200px;border-left:4px solid #4da3e0;flex-shrink:0}
+@media(max-width:900px){.pn{grid-template-columns:1fr;grid-template-rows:none;height:auto}.pn section:first-child{grid-row:auto}.dash-delivery-horiz{grid-column:auto}}`;
 let ctx, timers = [];
 function beep() {
-try { ctx ??= new AudioContext(); ctx.resume(); const o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; g.gain.value = .2; o.start(); o.stop(ctx.currentTime + .25); } catch { /* sin audio */ }
+try { ctx ??= new AudioContext(); ctx.resume(); const o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; g.gain.value = .2; o.start(); o.stop(ctx.currentTime + .25); } catch {}
 }
 const hace = x => Math.max(0, (Date.now() - new Date(String(x).replace(' ', 'T'))) / 60000 | 0) + ' min';
-// Controles de pago: efectivo (con "paga con"), transferencia o mixto. Devuelve una función que lee lo elegido.
 function pagoUI(box) {
 box.innerHTML = '<h2>Método de pago</h2><div class="tp"><button data-p="EFECTIVO">Efectivo</button><button data-p="TRANSFERENCIA">Transferencia</button><button data-p="MIXTO">Mixto</button></div><div id="px"></div>';
 let m = '';
@@ -64,11 +66,9 @@ const CSS2 = `
 .rs button{display:flex;justify-content:space-between;width:100%;margin:.25rem 0;text-align:left;font-weight:500}
 .ln{display:grid;grid-template-columns:1fr auto;gap:.3rem .6rem;padding:.6rem 0;border-bottom:1px solid #2a3340}.ln .q{display:flex;gap:.4rem;align-items:center}.ln .q button{width:2.4rem;padding:.4rem}
 .tt{margin:.8rem 0}.tt div{display:flex;justify-content:space-between}.tt .g{font-size:1.4rem;font-weight:800}.ok{color:#56c48f}
-.chk-bonif{display:flex;align-items:center;gap:.5rem;margin-top:.4rem;font-size:.95rem;color:#f0b13c;cursor:pointer}
-.chk-bonif input{width:auto!important;cursor:pointer}
-.tarjeta-cliente-info{background:#1a232e;border:1px solid #34404f;border-radius:10px;padding:.6rem .8rem;margin-bottom:.6rem;font-size:.9rem}
-.tarjeta-cliente-info p{margin:.2rem 0;color:var(--txt)}
-.txt-ahorro{color:#56c48f;font-weight:bold;margin-top:.3rem}
+.chk-manual{display:flex;align-items:center;gap:.5rem;margin:.5rem 0;font-size:.95rem;color:#4da3e0;cursor:pointer}
+.chk-manual input{width:auto!important}
+.box-manual{display:flex;gap:.5rem;margin-bottom:.8rem}
 .drawer-stock{position:fixed;right:-360px;top:0;width:340px;height:100%;background:#151a22;border-left:2px solid #34404f;box-shadow:-4px 0 15px rgba(0,0,0,.5);transition:right .3s ease;z-index:9999;padding:1rem;display:flex;flex-direction:column;box-sizing:border-box}
 .drawer-stock.open{right:0}
 .drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #2a3340;padding-bottom:.5rem}
@@ -91,8 +91,13 @@ root.innerHTML = `<style>${CSS}${CSS2}</style><div class="cj">
 </div>
 <div class="pn">
 <section id="carga"><h2>Carga de pedidos</h2><p>Leyendo catálogo y clientes…</p></section>
+<section><h2>Manejo de Mesas y Tandas</h2><div id="mm"></div></section>
 <section><h2>Cocina</h2><div id="mc"></div></section>
-<section><h2>Repartidores</h2><div id="mx"></div><div id="mr"></div></section>
+<div class="dash-delivery-horiz">
+<h2>Repartidores y Rendiciones</h2>
+<div id="mx"></div>
+<div id="mr" class="track-repartidores"></div>
+</div>
 </div>
 </div>
 <div id="drawerStock" class="drawer-stock">
@@ -104,9 +109,8 @@ root.innerHTML = `<style>${CSS}${CSS2}</style><div class="cj">
 <div id="stockContainer" class="stock-list"><p>Cargando stock...</p></div>
 </div>`;
 const D = await api('datos_cajero'), el = root.querySelector('#carga'), mon = { mesas: [] }, $ = q => root.querySelector(q);
-let ctl = { mesas() {} };
+let ctl = { mesas() {}, cobrarMesa() {} };
 if (D.error) el.innerHTML = `<h2>Carga de pedidos</h2><p class="err">No se pudo leer la planilla (${esc(D.error)}).</p>`; else ctl = carga(el, D, ses, mon);
-// Lógica Barra Lateral de Stock
 const drawer = $('#drawerStock');
 let stockData = D.stock || {};
 const renderStock = (filtro = '') => {
@@ -134,20 +138,36 @@ const ETQ = { RECIBIDA: 'En espera', EN_PREPARACION: 'Preparando', LISTA: 'Listo
 let v = '', R = { cocina: [], repartos: [] }, listos = null, entregados = null; const flash = new Set();
 const pintar = () => {
 if (!$('#mc')) return;
-$('#mc').innerHTML = R.cocina.map(t => `<div class="mi ${t.estado} ${flash.has(t.id) ? 'flash' : ''}"><b>${esc(t.tit)}</b><span>${ETQ[t.estado]}</span><small>${esc(t.tipo.toLowerCase())}, hace ${hace(t.envio)}</small>${t.estado === 'RECIBIDA' ? `<button class="sec" data-x="${esc(t.id)}" style="grid-column:1/3;padding:.4rem">Cancelar pedido</button>` : ''}</div>`).join('') || '<p>Sin pedidos en cocina.</p>';
+$('#mc').innerHTML = R.cocina.map(t => `
+<div class="mi ${t.estado} ${flash.has(t.id) ? 'flash' : ''}">
+<b>${esc(t.tit)}</b><span>${ETQ[t.estado]}</span>
+<small>${esc(t.tipo.toLowerCase())}, hace ${hace(t.envio)}</small>
+${t.estado !== 'ENTREGADO' ? `<button class="sec" data-x="${esc(t.id)}" style="grid-column:1/3;padding:.4rem;margin-top:.4rem">Cancelar pedido</button>` : ''}
+</div>`).join('') || '<p>Sin pedidos en cocina.</p>';
 $('#mc').querySelectorAll('[data-x]').forEach(b => b.onclick = async () => {
+if (!confirm('¿Seguro que querés cancelar este pedido?')) return;
 const m = prompt('Motivo de la cancelación:'); if (!m) return;
 const r = await api('cancelar_tanda', { id: b.dataset.x, motivo: m, usuario: ses.nombre });
-if (r.error) alert(r.error === 'ya_en_preparacion' ? 'Cocina ya empezó ese pedido: no se puede cancelar.' : 'No se pudo cancelar: ' + r.error);
+if (r.error) alert('No se pudo cancelar: ' + r.error);
 v = ''; cargar();
 });
-$('#mr').innerHTML = R.repartos.map(x => `<div class="mi ${x.estado}"><b>${esc(x.n)}</b><span>${x.estado === 'EN_CAMINO' ? 'En camino: ' + esc(x.pedido) : 'Libre'}</span><small>${x.ultimo ? 'Última entrega: ' + esc(x.ultimo) : 'Sin entregas todavía'}</small></div>`).join('') || '<p>No hay repartidores activos.</p>';
+$('#mr').innerHTML = R.repartos.map(x => `
+<div class="card-rep ${x.estado}">
+<b>${esc(x.n)}</b><br>
+<span>${x.estado === 'EN_CAMINO' ? 'En camino: ' + esc(x.pedido) : 'Libre'}</span><br>
+<small style="color:var(--tenue)">${x.ultimo ? 'Última: ' + esc(x.ultimo) : 'Sin entregas'}</small>
+</div>`).join('') || '<p>No hay repartidores activos.</p>';
 };
 let rk = '';
 const pintarX = () => {
 const k = JSON.stringify(R.rendir || []); if (k === rk || !$('#mx')) return; rk = k;
-$('#mx').innerHTML = (R.rendir || []).map(x => `<div class="mi" style="border-color:#f0b13c"><b>A la espera de rendición de dinero</b><span>${pesos(x.esperado)}</span>
-<small>${esc(x.repartidor)} entregó a ${esc(x.cliente)}</small><input type="number" inputmode="numeric" placeholder="Monto que trae" data-r="${esc(x.id)}"><button style="padding:.5rem" data-rb="${esc(x.id)}">Confirmar</button></div>`).join('');
+$('#mx').innerHTML = (R.rendir || []).map(x => `
+<div class="mi" style="border-color:#f0b13c;margin-bottom:.5rem">
+<b>A la espera de rendición</b><span>${pesos(x.esperado)}</span>
+<small>${esc(x.repartidor)} entregó a ${esc(x.cliente)}</small>
+<input type="number" inputmode="numeric" placeholder="Monto que trae" data-r="${esc(x.id)}">
+<button style="padding:.5rem;margin-top:.3rem" data-rb="${esc(x.id)}">Confirmar</button>
+</div>`).join('');
 $('#mx').querySelectorAll('[data-rb]').forEach(b => b.onclick = async () => {
 const r = await api('rendir', { id: b.dataset.rb, monto: $('#mx').querySelector(`[data-r="${b.dataset.rb}"]`).value, usuario: ses.nombre });
 if (r.error) { alert(r.error === 'monto_invalido' ? 'Ingresá el monto que trae el repartidor.' : 'No se pudo registrar: ' + r.error); return; }
@@ -170,14 +190,21 @@ timers = [setInterval(cargar, 3000), setInterval(pintar, 30000)]; cargar();
 $('#cerrar').onclick = () => { timers.forEach(clearInterval); cierre(root, ses); };
 }
 function carga(el, D, ses, mon) {
-const S = { tipo: 'SALON', items: {} }, $ = q => el.querySelector(q), val = q => ($(q)?.value || '').trim();
+const S = { tipo: 'SALON', items: {}, manual: false }, $ = q => el.querySelector(q), val = q => ($(q)?.value || '').trim();
 const NOMBRES = { SALON: 'Salón', RETIRO: 'Retiro', DELIVERY: 'Delivery' };
 el.innerHTML = `<h2>Carga de pedidos</h2><div class="tp">${Object.keys(NOMBRES).map(t => `<button data-t="${t}">${NOMBRES[t]}</button>`).join('')}</div>
-<div id="mesas"></div>
 <div id="tarjetaCliente"></div>
 <div class="fl" id="dat"></div>
+<label class="chk-manual"><input type="checkbox" id="chkManual"> Ingreso manual de producto</label>
+<div id="boxManual" class="box-manual" style="display:none">
+<input id="manNom" placeholder="Nombre del producto libre">
+<input id="manPre" type="number" placeholder="Precio $" inputmode="numeric">
+<button class="sec" id="btnAddMan" style="width:auto">Agregar</button>
+</div>
+<div id="boxNormal">
 <div class="tp"><button class="sec" data-f="COMIDA">Comidas</button><button class="sec" data-f="BEBIDA">Bebidas</button><button class="sec" data-f="COMBO">Combos</button></div>
 <input id="q" placeholder="Buscar producto…" autocomplete="off"><div class="rs" id="res"></div>
+</div>
 <div id="car"></div><div class="tt" id="tt"></div><div id="pago"></div><p class="err" id="er"></p><button id="env">CARGAR PEDIDO</button>
 <datalist id="cl">${D.clientes.map(c => `<option value="${esc(c.n)}">`).join('')}</datalist>`;
 const obtenerPrecioEnvioCalculado = (km) => {
@@ -211,20 +238,18 @@ ahorro: totalAhorro
 };
 const totales = () => {
 const c = calc();
-// Tarjeta del Cliente
 const tc = $('#tarjetaCliente');
 if (tc) {
 if (S.tipo !== 'SALON' && val('#nom')) {
-tc.innerHTML = `<div class="tarjeta-cliente-info">
-<p><strong>👤 Cliente:</strong> ${esc(val('#nom'))} ${c.nuevo ? '<span style="color:#f0b13c">(Nuevo)</span>' : ''}</p>
-${!c.nuevo ? `<p><strong>Nivel:</strong> ${esc(c.nivel || 'Sin Nivel')} | <strong>Puntos acumulados:</strong> ${c.pts} pts</p>` : ''}
-${c.ahorro > 0 ? `<div class="txt-ahorro">🎉 ¡Ahorra ${pesos(c.ahorro)} en este pedido!</div>` : ''}
+tc.innerHTML = `<div style="background:#1a232e;border:1px solid #34404f;border-radius:10px;padding:.6rem .8rem;margin-bottom:.6rem;font-size:.9rem">
+<p style="margin:.2rem 0"><strong>👤 Cliente:</strong> ${esc(val('#nom'))} ${c.nuevo ? '<span style="color:#f0b13c">(Nuevo)</span>' : ''}</p>
+${!c.nuevo ? `<p style="margin:.2rem 0"><strong>Nivel:</strong> ${esc(c.nivel || 'Sin Nivel')} | <strong>Puntos:</strong> ${c.pts} pts</p>` : ''}
+${c.ahorro > 0 ? `<div style="color:#56c48f;font-weight:bold;margin-top:.3rem">🎉 ¡Ahorra ${pesos(c.ahorro)} en este pedido!</div>` : ''}
 </div>`;
 } else {
 tc.innerHTML = '';
 }
 }
-// Totales Ticket
 $('#tt').innerHTML = `<div><span>Productos</span><span>${pesos(c.sub)}</span></div>
 ${c.pct ? `<div><span>Descuento ${c.pct * 100}% (redondeado)</span><span>${pesos(c.rd)}</span></div>` : ''}
 ${S.tipo === 'DELIVERY' ? `
@@ -235,9 +260,9 @@ ${S.tipo === 'DELIVERY' ? `
 <div class="g"><span>Total</span><span>${pesos(c.total)}</span></div>`;
 };
 const lineas = () => {
-$('#car').innerHTML = Object.values(S.items).map(i => `<div class="ln"><b>${esc(i.n)}</b><div class="q"><button class="sec" data-m="${esc(i.n)}">-</button>${i.c}<button class="sec" data-p="${esc(i.n)}">+</button></div>
-<input data-o="${esc(i.n)}" placeholder="Nota para cocina" value="${esc(i.o)}"><span>${pesos(i.p * i.c)}</span></div>`).join('');
-$('#car').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const i = S.items[b.dataset.m]; if (--i.c <= 0) delete S.items[i.n]; lineas(); });
+$('#car').innerHTML = Object.values(S.items).map(i => `<div class="ln"><b>${esc(i.n)} ${i.op ? `<small style="color:#4da3e0">(${esc(i.op)})</small>` : ''}</b><div class="q"><button class="sec" data-m="${esc(i.key)}">-</button>${i.c}<button class="sec" data-p="${esc(i.key)}">+</button></div>
+<input data-o="${esc(i.key)}" placeholder="Nota para cocina" value="${esc(i.o)}"><span>${pesos(i.p * i.c)}</span></div>`).join('');
+$('#car').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const i = S.items[b.dataset.m]; if (--i.c <= 0) delete S.items[b.dataset.m]; lineas(); });
 $('#car').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { S.items[b.dataset.p].c++; lineas(); });
 $('#car').querySelectorAll('[data-o]').forEach(b => b.oninput = () => S.items[b.dataset.o].o = b.value);
 totales();
@@ -287,14 +312,41 @@ S.pago = S.tipo === 'SALON' ? null : pagoUI($('#pago')); if (S.tipo === 'SALON')
 };
 const tipo = t => { S.tipo = t; el.querySelectorAll('[data-t]').forEach(b => b.className = b.dataset.t === t ? 'on' : 'sec'); datos(); };
 el.querySelectorAll('[data-t]').forEach(b => b.onclick = () => tipo(b.dataset.t));
+$('#chkManual').onchange = (e) => {
+S.manual = e.target.checked;
+$('#boxNormal').style.display = S.manual ? 'none' : 'block';
+$('#boxManual').style.display = S.manual ? 'flex' : 'none';
+};
+$('#btnAddMan').onclick = () => {
+const nom = val('#manNom'), pre = +val('#manPre');
+if (!nom || !pre) return alert('Ingresá nombre y precio válido.');
+const key = 'MANUAL_' + nom;
+S.items[key] = { key, n: nom, p: pre, c: 1, o: '', cat: 'MANUAL', op: '' };
+$('#manNom').value = ''; $('#manPre').value = ''; lineas();
+};
 let ms = '';
 const mesas = forzar => {
-const box = $('#mesas'), k = S.tipo + JSON.stringify(mon.mesas); if (!box || (!forzar && k === ms)) return; ms = k;
-box.innerHTML = S.tipo === 'SALON' && mon.mesas.length ? '<h2>Mesas abiertas</h2>' + mon.mesas.map(m => `<button class="sec" data-ms="${esc(m.mesa)}" data-tot="${m.total}">Cobrar mesa ${esc(m.mesa)}: ${pesos(m.total)}</button>`).join('') + '<div id="cm"></div>' : '';
+const box = root.querySelector('#mm'), k = S.tipo + JSON.stringify(mon.mesas); if (!box || (!forzar && k === ms)) return; ms = k;
+box.innerHTML = mon.mesas.length ? mon.mesas.map(m => `
+<div class="mi" style="border-color:#4da3e0;margin-bottom:.6rem;display:flex;flex-direction:column;gap:.4rem">
+<div style="display:flex;justify-content:space-between"><b>Mesa ${esc(m.mesa)}</b><span>${pesos(m.total)}</span></div>
+<div style="display:flex;gap:.4rem">
+<button class="sec" data-tanda="${esc(m.mesa)}" style="padding:.4rem"> + Tanda</button>
+<button data-ms="${esc(m.mesa)}" data-tot="${m.total}" style="padding:.4rem">Cobrar Mesa</button>
+</div>
+</div>`).join('') : '<p>No hay mesas abiertas.</p>';
 box.querySelectorAll('[data-ms]').forEach(b => b.onclick = () => cobrarMesa(b.dataset.ms, +b.dataset.tot));
+box.querySelectorAll('[data-tanda]').forEach(b => b.onclick = () => {
+tipo('SALON');
+if ($('#mesa')) $('#mesa').value = b.dataset.tanda;
+alert(`Mesa ${b.dataset.tanda} seleccionada. Agregá los nuevos productos y hacé clic en CARGAR PEDIDO.`);
+});
 };
 const cobrarMesa = (mesa, total) => {
-const cm = $('#cm'); cm.innerHTML = `<h2>Cobrar mesa ${esc(mesa)}: ${pesos(total)}</h2><div id="pg"></div><p class="err" id="ec"></p><button id="okc">Confirmar cobro</button>`;
+tipo('SALON');
+if ($('#mesa')) $('#mesa').value = mesa;
+const cm = root.querySelector('#mm');
+cm.innerHTML = `<div class="mi" style="border-color:#56c48f"><h2>Cobrando mesa ${esc(mesa)}: ${pesos(total)}</h2></div><div id="pg"></div><p class="err" id="ec"></p><button id="okc">Confirmar cobro</button>`;
 const leer = pagoUI(cm.querySelector('#pg'));
 cm.querySelector('#okc').onclick = async () => {
 const r = await api('cobrar_mesa', { mesa, usuario: ses.nombre, ...leer() }), e = cm.querySelector('#ec');
@@ -316,7 +368,17 @@ return `<button class="sec" data-n="${esc(p.n)}">
 </button>`;
 }).join('');
 $('#res').querySelectorAll('button').forEach(b => b.onclick = () => {
-const p = D.catalogo.find(x => x.n === b.dataset.n); (S.items[p.n] ??= { ...p, c: 0, o: '' }).c++;
+const p = D.catalogo.find(x => x.n === b.dataset.n);
+let opElegida = '';
+if (p.ops && p.ops.length > 0) {
+let txt = p.ops.map((o, idx) => `${idx + 1}. ${o}`).join('\n');
+let sel = prompt(`Elegí la opción de bebida para ${p.n}:\n${txt}`, "1");
+let idx = parseInt(sel) - 1;
+if (isNaN(idx) || !p.ops[idx]) return alert('Opción inválida.');
+opElegida = p.ops[idx];
+}
+const key = opElegida ? `${p.n}_${opElegida}` : p.n;
+(S.items[key] ??= { key, ...p, op: opElegida, c: 0, o: '' }).c++;
 $('#q').value = ''; $('#res').innerHTML = ''; lineas();
 });
 };
@@ -338,7 +400,7 @@ direccion: val('#dir'),
 km: c.km,
 envio: c.envioBase,
 envioBonificado: c.bonificado,
-items: Object.values(S.items).map(i => ({ n: i.n, c: i.c, o: i.o })), 
+items: Object.values(S.items).map(i => ({ n: i.n, c: i.c, o: i.o, op: i.op })), 
 usuario: ses.nombre, 
 ...(S.pago ? S.pago() : {}) 
 });
@@ -347,7 +409,7 @@ S.items = {}; datos(); lineas();
 err.className = 'ok'; err.textContent = `Pedido ${r.id_cuenta} registrado${r.tanda ? ' y enviado a cocina (tanda ' + r.tanda + ')' : ' (solo bebidas: no pasa por cocina)'}.${r.vuelto ? ' Vuelto: ' + pesos(r.vuelto) : ''}`;
 };
 tipo('SALON'); lineas();
-return { mesas };
+return { mesas, cobrarMesa };
 }
 async function cierre(root, ses) {
 root.innerHTML = `<style>${CSS}${CSS2}</style><div class="cj"><div class="cl"><h1>Cerrar ventas</h1><p>Leyendo la jornada…</p></div></div>`;
@@ -387,3 +449,4 @@ box.querySelector('#fin').onclick = () => { sessionStorage.removeItem('cajero');
 };
 };
 }
+
