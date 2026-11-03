@@ -12,18 +12,38 @@ const CSS = `
 .ch{display:flex;justify-content:space-between;align-items:center;padding:.7rem 1.2rem;color:var(--tenue);border-bottom:1px solid #2a3340}
 .pn{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:.8rem;padding:.8rem;height:calc(100vh - 7rem)}
 .pn section{background:var(--card);border-radius:12px;padding:1rem;overflow:auto}.pn section:first-child{grid-row:1/3}
-.pn h2{margin:0 0 .5rem;font-size:1.1rem}.pn p{color:var(--tenue)}
-.dash-delivery-horiz{grid-column:1/3;background:var(--card);border-radius:12px;padding:.6rem .8rem;height:5.5rem;overflow-x:auto}
+.pn h2{margin:0 0 .5rem;font-size:1.1rem;color:var(--acento)}.pn p{color:var(--tenue)}
+.dash-delivery-horiz{grid-column:1/3;background:var(--card);border-radius:12px;padding:.6rem .8rem;height:5.5rem;overflow-x:auto;box-sizing:border-box}
 .track-repartidores{display:flex;gap:.8rem;overflow-x:auto;padding-bottom:.2rem}
-.card-rep{background:#151a22;border-radius:8px;padding:.5rem .7rem;min-width:180px;border-left:4px solid #4da3e0;flex-shrink:0}
+.card-rep{background:#151a22;border-radius:8px;padding:.5rem .7rem;min-width:180px;border-left:4px solid var(--acento);flex-shrink:0}
 @media(max-width:900px){.pn{grid-template-columns:1fr;grid-template-rows:none;height:auto}.pn section:first-child{grid-row:auto}.dash-delivery-horiz{grid-column:auto;height:auto}}`;
+const CSS2 = `
+.mi{display:grid;grid-template-columns:1fr auto;gap:.1rem .6rem;padding:.5rem .6rem;margin-bottom:.4rem;border-radius:10px;background:#2a3340;border-left:5px solid var(--alerta)}.mi.EN_PREPARACION,.mi.EN_CAMINO{border-color:var(--acento)}.mi.LISTA,.mi.LIBRE{border-color:var(--exito)}.mi small{grid-column:1/3;color:var(--tenue)}.flash{animation:fl 1s 8}@keyframes fl{50%{background:#2f6b4f}}
+.tp{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.8rem}.cj button.sec{background:#2d3846;color:var(--txt)}.cj button.on{background:var(--acento);color:#06121d}
+.fl{display:grid;gap:.5rem;margin-bottom:.8rem}.bd{display:inline-block;padding:.1rem .6rem;border-radius:99px;background:#2d3846;font-size:.9rem}
+.rs button{display:flex;justify-content:space-between;width:100%;margin:.25rem 0;text-align:left;font-weight:500}
+.ln{display:grid;grid-template-columns:1fr auto;gap:.3rem .6rem;padding:.6rem 0;border-bottom:1px solid #2a3340}.ln .q{display:flex;gap:.4rem;align-items:center}.ln .q button{width:2.4rem;padding:.4rem}
+.tt{margin:.8rem 0}.tt div{display:flex;justify-content:space-between}.tt .g{font-size:1.4rem;font-weight:800}.ok{color:var(--exito)}
+.chk-manual{display:flex;align-items:center;gap:.5rem;margin:.5rem 0;font-size:.95rem;color:var(--acento);cursor:pointer}
+.chk-manual input{width:auto!important}
+.box-manual{display:flex;gap:.5rem;margin-bottom:.8rem}
+.drawer-stock{position:fixed;right:-360px;top:0;width:340px;height:100%;background:#151a22;border-left:2px solid #34404f;box-shadow:-4px 0 15px rgba(0,0,0,.5);transition:right .3s ease;z-index:9999;padding:1rem;display:flex;flex-direction:column;box-sizing:border-box}
+.drawer-stock.open{right:0}
+.drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #2a3340;padding-bottom:.5rem}
+.drawer-header h3{margin:0;font-size:1.2rem}
+.drawer-header button{width:auto;padding:.3rem .7rem;background:#2d3846;color:#fff}
+.stock-list{flex-grow:1;overflow-y:auto;margin-top:1rem}
+.stock-item{display:flex;justify-content:space-between;align-items:center;padding:.6rem;border-bottom:1px solid #2a3340}
+.stock-low{color:var(--alerta);font-weight:bold}
+.stock-ok{color:var(--exito);font-weight:bold}
+.lbl-stock-cat{font-size:.8rem;padding:.15rem .4rem;border-radius:4px;display:inline-block;margin-left:.3rem}`;
 let ctx, timers = [];
 function beep() {
 try { ctx ??= new AudioContext(); ctx.resume(); const o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; g.gain.value = .2; o.start(); o.stop(ctx.currentTime + .25); } catch {}
 }
 const hace = x => Math.max(0, (Date.now() - new Date(String(x).replace(' ', 'T'))) / 60000 | 0) + ' min';
 function pagoUI(box) {
-box.innerHTML = '<h2>Método de pago</h2><div class="tp"><button data-p="EFECTIVO">Efectivo</button><button data-p="TRANSFERENCIA">Transferencia</button><button data-p="MIXTO">Mixto</button></div><div id="px"></div>';
+box.innerHTML = '<h2>Método de pago</h2><div class="tp"><button type="button" data-p="EFECTIVO">Efectivo</button><button type="button" data-p="TRANSFERENCIA">Transferencia</button><button type="button" data-p="MIXTO">Mixto</button></div><div id="px"></div>';
 let m = '';
 const set = k => {
 m = k; box.querySelectorAll('[data-p]').forEach(b => b.className = b.dataset.p === k ? 'on' : 'sec');
@@ -59,26 +79,6 @@ const s = { nombre, j: r.id_jornada };
 sessionStorage.setItem('cajero', JSON.stringify(s)); panel(root, s);
 };
 }
-const CSS2 = `
-.mi{display:grid;grid-template-columns:1fr auto;gap:.1rem .6rem;padding:.5rem .6rem;margin-bottom:.4rem;border-radius:10px;background:#2a3340;border-left:5px solid #f0b13c}.mi.EN_PREPARACION,.mi.EN_CAMINO{border-color:#4da3e0}.mi.LISTA,.mi.LIBRE{border-color:#56c48f}.mi small{grid-column:1/3;color:#93a1b3}.flash{animation:fl 1s 8}@keyframes fl{50%{background:#2f6b4f}}
-.tp{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.8rem}.cj button.sec{background:#2d3846;color:var(--txt)}.cj button.on{background:var(--acento);color:#06121d}
-.fl{display:grid;gap:.5rem;margin-bottom:.8rem}.bd{display:inline-block;padding:.1rem .6rem;border-radius:99px;background:#2d3846;font-size:.9rem}
-.rs button{display:flex;justify-content:space-between;width:100%;margin:.25rem 0;text-align:left;font-weight:500}
-.ln{display:grid;grid-template-columns:1fr auto;gap:.3rem .6rem;padding:.6rem 0;border-bottom:1px solid #2a3340}.ln .q{display:flex;gap:.4rem;align-items:center}.ln .q button{width:2.4rem;padding:.4rem}
-.tt{margin:.8rem 0}.tt div{display:flex;justify-content:space-between}.tt .g{font-size:1.4rem;font-weight:800}.ok{color:#56c48f}
-.chk-manual{display:flex;align-items:center;gap:.5rem;margin:.5rem 0;font-size:.95rem;color:#4da3e0;cursor:pointer}
-.chk-manual input{width:auto!important}
-.box-manual{display:flex;gap:.5rem;margin-bottom:.8rem}
-.drawer-stock{position:fixed;right:-360px;top:0;width:340px;height:100%;background:#151a22;border-left:2px solid #34404f;box-shadow:-4px 0 15px rgba(0,0,0,.5);transition:right .3s ease;z-index:9999;padding:1rem;display:flex;flex-direction:column;box-sizing:border-box}
-.drawer-stock.open{right:0}
-.drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #2a3340;padding-bottom:.5rem}
-.drawer-header h3{margin:0;font-size:1.2rem}
-.drawer-header button{width:auto;padding:.3rem .7rem;background:#2d3846;color:#fff}
-.stock-list{flex-grow:1;overflow-y:auto;margin-top:1rem}
-.stock-item{display:flex;justify-content:space-between;align-items:center;padding:.6rem;border-bottom:1px solid #2a3340}
-.stock-low{color:#f0b13c;font-weight:bold}
-.stock-ok{color:#56c48f;font-weight:bold}
-.lbl-stock-cat{font-size:.8rem;padding:.15rem .4rem;border-radius:4px;display:inline-block;margin-left:.3rem}`;
 async function panel(root, ses) {
 timers.forEach(clearInterval); timers = [];
 root.innerHTML = `<style>${CSS}${CSS2}</style><div class="cj">
@@ -131,19 +131,19 @@ return `<div class="stock-item">
 </div>`;
 }).join('');
 };
-$('#btnStockDrawer').onclick = () => { drawer.classList.add('open'); renderStock($('#searchStock').value); };
-$('#btnCloseStock').onclick = () => drawer.classList.remove('open');
-$('#searchStock').oninput = (e) => renderStock(e.target.value);
-const ETQ = { RECIBIDA: 'En espera', EN_PREPARACION: 'Preparando', LISTA: 'Listo' };
+if ($('#btnStockDrawer')) $('#btnStockDrawer').onclick = () => { drawer.classList.add('open'); renderStock($('#searchStock').value); };
+if ($('#btnCloseStock')) $('#btnCloseStock').onclick = () => drawer.classList.remove('open');
+if ($('#searchStock')) $('#searchStock').oninput = (e) => renderStock(e.target.value);
+const ETQ = { RECIBIDA: 'En espera', EN_PREPARACION: 'Preparando', LISTA: 'Listo', EN_CAMINO: 'En camino' };
 let v = '', R = { cocina: [], repartos: [] }, listos = null, entregados = null; const flash = new Set();
 const pintar = () => {
 if (!$('#mc')) return;
 $('#mc').innerHTML = R.cocina.map(t => `
 <div class="mi ${t.estado} ${flash.has(t.id) ? 'flash' : ''}">
-<b>${esc(t.tit)}</b><span>${ETQ[t.estado]}</span>
-<small>${esc(t.tipo.toLowerCase())}, hace ${hace(t.envio)}</small>
+<b>#${esc(t.id)} - ${esc(t.tit || t.cliente || 'Pedido')}</b><span>${ETQ[t.estado] || esc(t.estado)}</span>
+<small>${esc(t.tipo || 'SALON')}, hace ${hace(t.envio || t.fecha)} ${t.resumen ? '<br>' + esc(t.resumen) : ''}</small>
 ${t.estado !== 'ENTREGADO' ? `<button class="sec" data-x="${esc(t.id)}" style="grid-column:1/3;padding:.4rem;margin-top:.4rem">Cancelar pedido</button>` : ''}
-</div>`).join('') || '<p>Sin pedidos en cocina.</p>';
+</div>`).join('') || '<p style="color:var(--tenue)">Sin pedidos en cocina.</p>';
 $('#mc').querySelectorAll('[data-x]').forEach(b => b.onclick = async () => {
 if (!confirm('¿Seguro que querés cancelar este pedido?')) return;
 const m = prompt('Motivo de la cancelación:'); if (!m) return;
@@ -151,18 +151,20 @@ const r = await api('cancelar_tanda', { id: b.dataset.x, motivo: m, usuario: ses
 if (r.error) alert('No se pudo cancelar: ' + r.error);
 v = ''; cargar();
 });
+if ($('#mr')) {
 $('#mr').innerHTML = R.repartos.map(x => `
 <div class="card-rep ${x.estado}">
-<b>${esc(x.n)}</b><br>
-<span>${x.estado === 'EN_CAMINO' ? 'En camino: ' + esc(x.pedido) : 'Libre'}</span><br>
-<small style="color:var(--tenue)">${x.ultimo ? 'Última: ' + esc(x.ultimo) : 'Sin entregas'}</small>
-</div>`).join('') || '<p>No hay repartidores activos.</p>';
+<b>${esc(x.n || x.nombre)}</b><br>
+<span>${x.estado === 'EN_CAMINO' ? 'En camino: #' + esc(x.pedido || x.id_pedido) : 'Libre'}</span><br>
+<small style="color:var(--tenue)">${x.ultimo ? 'Última: ' + esc(x.ultimo) : 'Pendiente: ' + pesos(x.pendiente || 0)}</small>
+</div>`).join('') || '<p style="color:var(--tenue)">No hay repartidores activos.</p>';
+}
 };
 let rk = '';
 const pintarX = () => {
 const k = JSON.stringify(R.rendir || []); if (k === rk || !$('#mx')) return; rk = k;
 $('#mx').innerHTML = (R.rendir || []).map(x => `
-<div class="mi" style="border-color:#f0b13c;margin-bottom:.5rem">
+<div class="mi" style="border-color:var(--alerta);margin-bottom:.5rem">
 <b>A la espera de rendición</b><span>${pesos(x.esperado)}</span>
 <small>${esc(x.repartidor)} entregó a ${esc(x.cliente)}</small>
 <input type="number" inputmode="numeric" placeholder="Monto que trae" data-r="${esc(x.id)}">
@@ -178,35 +180,50 @@ const cargar = async () => {
 if (!$('#mc')) return;
 const r = await api('cajero_monitor', { v });
 if (r.error || r.sin_cambios) return;
-v = r.v; R = r; mon.mesas = r.mesas; ctl.mesas();
-if (r.stock) { stockData = r.stock; renderStock($('#searchStock').value); }
-const ls = new Set(r.cocina.filter(t => t.estado === 'LISTA').map(t => t.id));
+v = r.v; R = r; mon.mesas = r.mesas || []; ctl.mesas();
+if (r.stock) { stockData = r.stock; renderStock($('#searchStock')?.value || ''); }
+const ls = new Set((r.cocina || []).filter(t => t.estado === 'LISTA').map(t => t.id));
 if (listos) { const nuevos = [...ls].filter(x => !listos.has(x)); if (nuevos.length) { beep(); nuevos.forEach(x => { flash.add(x); setTimeout(() => { flash.delete(x); pintar(); }, 8000); }); } }
 listos = ls;
-const ent = r.repartos.reduce((t, x) => t + x.entregados, 0); if (entregados !== null && ent > entregados) beep(); entregados = ent;
+const ent = (r.repartos || []).reduce((t, x) => t + (x.entregados || 0), 0); if (entregados !== null && ent > entregados) beep(); entregados = ent;
 pintar(); pintarX();
 };
 timers = [setInterval(cargar, 3000), setInterval(pintar, 30000)]; cargar();
-$('#cerrar').onclick = () => { timers.forEach(clearInterval); cierre(root, ses); };
+if ($('#cerrar')) $('#cerrar').onclick = () => { timers.forEach(clearInterval); cierre(root, ses); };
 }
 function carga(el, D, ses, mon) {
 const S = { tipo: 'SALON', items: {}, manual: false }, $ = q => el.querySelector(q), val = q => ($(q)?.value || '').trim();
 const NOMBRES = { SALON: 'Salón', RETIRO: 'Retiro', DELIVERY: 'Delivery' };
-el.innerHTML = `<h2>Carga de pedidos</h2><div class="tp">${Object.keys(NOMBRES).map(t => `<button data-t="${t}">${NOMBRES[t]}</button>`).join('')}</div>
+const resetFormulario = () => {
+S.items = {};
+if ($('#q')) $('#q').value = '';
+if ($('#res')) $('#res').innerHTML = '';
+if ($('#manNom')) $('#manNom').value = '';
+if ($('#manPre')) $('#manPre').value = '';
+if ($('#mesa')) $('#mesa').value = '';
+if ($('#nom')) $('#nom').value = '';
+if ($('#tel')) $('#tel').value = '';
+if ($('#dir')) $('#dir').value = '';
+if ($('#km')) $('#km').value = '';
+if ($('#mon')) $('#mon').value = '';
+if ($('#chkBonificado')) $('#chkBonificado').checked = false;
+lineas();
+};
+el.innerHTML = `<h2>Carga de pedidos</h2><div class="tp">${Object.keys(NOMBRES).map(t => `<button type="button" data-t="${t}">${NOMBRES[t]}</button>`).join('')}</div>
 <div id="tarjetaCliente"></div>
 <div class="fl" id="dat"></div>
 <label class="chk-manual"><input type="checkbox" id="chkManual"> Ingreso manual de producto</label>
 <div id="boxManual" class="box-manual" style="display:none">
 <input id="manNom" placeholder="Nombre del producto libre">
 <input id="manPre" type="number" placeholder="Precio $" inputmode="numeric">
-<button class="sec" id="btnAddMan" style="width:auto">Agregar</button>
+<button type="button" class="sec" id="btnAddMan" style="width:auto">Agregar</button>
 </div>
 <div id="boxNormal">
-<div class="tp"><button class="sec" data-f="COMIDA">Comidas</button><button class="sec" data-f="BEBIDA">Bebidas</button><button class="sec" data-f="COMBO">Combos</button></div>
+<div class="tp"><button type="button" class="sec" data-f="COMIDA">Comidas</button><button type="button" class="sec" data-f="BEBIDA">Bebidas</button><button type="button" class="sec" data-f="COMBO">Combos</button></div>
 <input id="q" placeholder="Buscar producto…" autocomplete="off"><div class="rs" id="res"></div>
 </div>
-<div id="car"></div><div class="tt" id="tt"></div><div id="pago"></div><p class="err" id="er"></p><button id="env">CARGAR PEDIDO</button>
-<datalist id="cl">${D.clientes.map(c => `<option value="${esc(c.n)}">`).join('')}</datalist>`;
+<div id="car"></div><div class="tt" id="tt"></div><div id="pago"></div><p class="err" id="er"></p><button type="button" id="env">CARGAR PEDIDO</button>
+<datalist id="cl">${(D.clientes || []).map(c => `<option value="${esc(c.n)}">`).join('')}</datalist>`;
 const obtenerPrecioEnvioCalculado = (km) => {
 const tarifas = D.tarifas_envio || [];
 if (!tarifas.length) return 0;
@@ -217,9 +234,9 @@ if (km <= tarifas[i].km) { p = tarifas[i].precio; break; }
 return p;
 };
 const calc = () => {
-const L = Object.values(S.items), sub = L.reduce((s, i) => s + i.p * i.c, 0), des = L.filter(i => D.cats.includes(i.cat)).reduce((s, i) => s + i.p * i.c, 0);
-const cli = S.tipo === 'SALON' ? null : D.clientes.find(c => c.n.toUpperCase() === val('#nom').toUpperCase());
-const r = cli && D.reglas.find(x => x.nivel === cli.nivel), aplica = r && (r.dias === 'TODOS' || r.dias.split(',').includes(D.dia));
+const L = Object.values(S.items), sub = L.reduce((s, i) => s + i.p * i.c, 0), des = L.filter(i => (D.cats || []).includes(i.cat)).reduce((s, i) => s + i.p * i.c, 0);
+const cli = S.tipo === 'SALON' ? null : (D.clientes || []).find(c => c.n.toUpperCase() === val('#nom').toUpperCase());
+const r = cli && (D.reglas || []).find(x => x.nivel === cli.nivel), aplica = r && (r.dias === 'TODOS' || r.dias.split(',').includes(D.dia));
 const pct = aplica ? r.pct : 0, gratis = S.tipo === 'DELIVERY' && !!r && r.gratis === 'SI';
 const km = S.tipo === 'DELIVERY' ? +val('#km') || 0 : 0;
 const envioBase = S.tipo === 'DELIVERY' ? (val('#mon') !== '' ? +val('#mon') || 0 : obtenerPrecioEnvioCalculado(km)) : 0;
@@ -242,14 +259,15 @@ const tc = $('#tarjetaCliente');
 if (tc) {
 if (S.tipo !== 'SALON' && val('#nom')) {
 tc.innerHTML = `<div style="background:#1a232e;border:1px solid #34404f;border-radius:10px;padding:.6rem .8rem;margin-bottom:.6rem;font-size:.9rem">
-<p style="margin:.2rem 0"><strong>👤 Cliente:</strong> ${esc(val('#nom'))} ${c.nuevo ? '<span style="color:#f0b13c">(Nuevo)</span>' : ''}</p>
+<p style="margin:.2rem 0"><strong>👤 Cliente:</strong> ${esc(val('#nom'))} ${c.nuevo ? '<span style="color:var(--alerta)">(Nuevo)</span>' : ''}</p>
 ${!c.nuevo ? `<p style="margin:.2rem 0"><strong>Nivel:</strong> ${esc(c.nivel || 'Sin Nivel')} | <strong>Puntos:</strong> ${c.pts} pts</p>` : ''}
-${c.ahorro > 0 ? `<div style="color:#56c48f;font-weight:bold;margin-top:.3rem">🎉 ¡Ahorra ${pesos(c.ahorro)} en este pedido!</div>` : ''}
+${c.ahorro > 0 ? `<div style="color:var(--exito);font-weight:bold;margin-top:.3rem">🎉 ¡Ahorra ${pesos(c.ahorro)} en este pedido!</div>` : ''}
 </div>`;
 } else {
 tc.innerHTML = '';
 }
 }
+if ($('#tt')) {
 $('#tt').innerHTML = `<div><span>Productos</span><span>${pesos(c.sub)}</span></div>
 ${c.pct ? `<div><span>Descuento ${c.pct * 100}% (redondeado)</span><span>${pesos(c.rd)}</span></div>` : ''}
 ${S.tipo === 'DELIVERY' ? `
@@ -258,9 +276,11 @@ ${S.tipo === 'DELIVERY' ? `
 <span>${pesos(c.envioCliente)} ${c.bonificado ? `<small style="color:var(--tenue)">(Repartidor: ${pesos(c.envioBase)})</small>` : ''}</span>
 </div>` : ''}
 <div class="g"><span>Total</span><span>${pesos(c.total)}</span></div>`;
+}
 };
 const lineas = () => {
-$('#car').innerHTML = Object.values(S.items).map(i => `<div class="ln"><b>${esc(i.n)} ${i.op ? `<small style="color:#4da3e0">(${esc(i.op)})</small>` : ''}</b><div class="q"><button class="sec" data-m="${esc(i.key)}">-</button>${i.c}<button class="sec" data-p="${esc(i.key)}">+</button></div>
+if (!$('#car')) return;
+$('#car').innerHTML = Object.values(S.items).map(i => `<div class="ln"><b>${esc(i.n)} ${i.op ? `<small style="color:var(--acento)">(${esc(i.op)})</small>` : ''}</b><div class="q"><button type="button" class="sec" data-m="${esc(i.key)}">-</button>${i.c}<button type="button" class="sec" data-p="${esc(i.key)}">+</button></div>
 <input data-o="${esc(i.key)}" placeholder="Nota para cocina" value="${esc(i.o)}"><span>${pesos(i.p * i.c)}</span></div>`).join('');
 $('#car').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { const i = S.items[b.dataset.m]; if (--i.c <= 0) delete S.items[b.dataset.m]; lineas(); });
 $('#car').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { S.items[b.dataset.p].c++; lineas(); });
@@ -270,13 +290,14 @@ totales();
 const autocompletarContactoCliente = () => {
 const nombreIngresado = val('#nom').toUpperCase();
 if (!nombreIngresado) return;
-const cli = D.clientes.find(c => c.n.toUpperCase() === nombreIngresado);
+const cli = (D.clientes || []).find(c => c.n.toUpperCase() === nombreIngresado);
 if (cli) {
 if ($('#tel') && cli.tel && !val('#tel')) $('#tel').value = cli.tel;
 if ($('#dir') && cli.dir && !val('#dir')) $('#dir').value = cli.dir;
 }
 };
 const datos = () => {
+if (!$('#dat')) return;
 $('#dat').innerHTML = S.tipo === 'SALON' ? '<input id="mesa" placeholder="Mesa N°" inputmode="numeric">'
 : `<input id="nom" list="cl" placeholder="Nombre y apellido del cliente" autocomplete="off">
 ${S.tipo === 'DELIVERY' ? `
@@ -312,11 +333,14 @@ S.pago = S.tipo === 'SALON' ? null : pagoUI($('#pago')); if (S.tipo === 'SALON')
 };
 const tipo = t => { S.tipo = t; el.querySelectorAll('[data-t]').forEach(b => b.className = b.dataset.t === t ? 'on' : 'sec'); datos(); };
 el.querySelectorAll('[data-t]').forEach(b => b.onclick = () => tipo(b.dataset.t));
+if ($('#chkManual')) {
 $('#chkManual').onchange = (e) => {
 S.manual = e.target.checked;
 $('#boxNormal').style.display = S.manual ? 'none' : 'block';
 $('#boxManual').style.display = S.manual ? 'flex' : 'none';
 };
+}
+if ($('#btnAddMan')) {
 $('#btnAddMan').onclick = () => {
 const nom = val('#manNom'), pre = +val('#manPre');
 if (!nom || !pre) return alert('Ingresá nombre y precio válido.');
@@ -324,17 +348,19 @@ const key = 'MANUAL_' + nom;
 S.items[key] = { key, n: nom, p: pre, c: 1, o: '', cat: 'MANUAL', op: '' };
 $('#manNom').value = ''; $('#manPre').value = ''; lineas();
 };
+}
 let ms = '';
 const mesas = forzar => {
-const box = root.querySelector('#mm'), k = S.tipo + JSON.stringify(mon.mesas); if (!box || (!forzar && k === ms)) return; ms = k;
-box.innerHTML = mon.mesas.length ? mon.mesas.map(m => `
-<div class="mi" style="border-color:#4da3e0;margin-bottom:.6rem;display:flex;flex-direction:column;gap:.4rem">
+const rootEl = el.closest('.cj') || document;
+const box = rootEl.querySelector('#mm'), k = S.tipo + JSON.stringify(mon.mesas); if (!box || (!forzar && k === ms)) return; ms = k;
+box.innerHTML = (mon.mesas && mon.mesas.length) ? mon.mesas.map(m => `
+<div class="mi" style="border-color:var(--acento);margin-bottom:.6rem;display:flex;flex-direction:column;gap:.4rem">
 <div style="display:flex;justify-content:space-between"><b>Mesa ${esc(m.mesa)}</b><span>${pesos(m.total)}</span></div>
 <div style="display:flex;gap:.4rem">
-<button class="sec" data-tanda="${esc(m.mesa)}" style="padding:.4rem"> + Tanda</button>
-<button data-ms="${esc(m.mesa)}" data-tot="${m.total}" style="padding:.4rem">Cobrar Mesa</button>
+<button type="button" class="sec" data-tanda="${esc(m.mesa)}" style="padding:.4rem"> + Tanda</button>
+<button type="button" data-ms="${esc(m.mesa)}" data-tot="${m.total}" style="padding:.4rem">Cobrar Mesa</button>
 </div>
-</div>`).join('') : '<p>No hay mesas abiertas.</p>';
+</div>`).join('') : '<p style="color:var(--tenue)">No hay mesas abiertas.</p>';
 box.querySelectorAll('[data-ms]').forEach(b => b.onclick = () => cobrarMesa(b.dataset.ms, +b.dataset.tot));
 box.querySelectorAll('[data-tanda]').forEach(b => b.onclick = () => {
 tipo('SALON');
@@ -345,8 +371,9 @@ alert(`Mesa ${b.dataset.tanda} seleccionada. Agregá los nuevos productos y hac�
 const cobrarMesa = (mesa, total) => {
 tipo('SALON');
 if ($('#mesa')) $('#mesa').value = mesa;
-const cm = root.querySelector('#mm');
-cm.innerHTML = `<div class="mi" style="border-color:#56c48f"><h2>Cobrando mesa ${esc(mesa)}: ${pesos(total)}</h2></div><div id="pg"></div><p class="err" id="ec"></p><button id="okc">Confirmar cobro</button>`;
+const rootEl = el.closest('.cj') || document;
+const cm = rootEl.querySelector('#mm');
+cm.innerHTML = `<div class="mi" style="border-color:var(--exito)"><h2>Cobrando mesa ${esc(mesa)}: ${pesos(total)}</h2></div><div id="pg"></div><p class="err" id="ec"></p><button type="button" id="okc">Confirmar cobro</button>`;
 const leer = pagoUI(cm.querySelector('#pg'));
 cm.querySelector('#okc').onclick = async () => {
 const r = await api('cobrar_mesa', { mesa, usuario: ses.nombre, ...leer() }), e = cm.querySelector('#ec');
@@ -355,20 +382,21 @@ cm.innerHTML = `<p class="ok">Mesa ${esc(mesa)} cobrada.${r.vuelto ? ' Vuelto: '
 };
 };
 const buscar = () => {
-const q = val('#q').toUpperCase(), f = S.filtro, base = D.catalogo.filter(p => p.disp && (!f || p.t === f));
-const L = (q ? base.filter(p => p.n.toUpperCase().includes(q) || p.cat.includes(q)) : f ? base : D.catalogo.filter(p => p.disp)).slice(0, 15);
+const q = val('#q').toUpperCase(), f = S.filtro, base = (D.catalogo || []).filter(p => p.disp && (!f || p.t === f));
+const L = (q ? base.filter(p => p.n.toUpperCase().includes(q) || p.cat.includes(q)) : f ? base : (D.catalogo || []).filter(p => p.disp)).slice(0, 15);
+if (!$('#res')) return;
 $('#res').innerHTML = L.map(p => {
 const infoStock = (D.stock && D.stock[p.n.toUpperCase()]) ? D.stock[p.n.toUpperCase()].stock : null;
 const tieneStock = infoStock !== null;
 const stockTxt = tieneStock ? `${infoStock} un.` : 'N/D';
-const estiloStock = tieneStock && infoStock <= 3 ? 'background:#f0b13c;color:#06121d' : 'background:#2d3846;color:#56c48f';
-return `<button class="sec" data-n="${esc(p.n)}">
+const estiloStock = tieneStock && infoStock <= 3 ? 'background:var(--alerta);color:#06121d' : 'background:#2d3846;color:var(--exito)';
+return `<button type="button" class="sec" data-n="${esc(p.n)}">
 <span>${esc(p.n)} <small>${esc(p.cat)}</small><span class="lbl-stock-cat" style="${estiloStock}">${stockTxt}</span></span>
 <span>${pesos(p.p)}</span>
 </button>`;
 }).join('');
 $('#res').querySelectorAll('button').forEach(b => b.onclick = () => {
-const p = D.catalogo.find(x => x.n === b.dataset.n);
+const p = (D.catalogo || []).find(x => x.n === b.dataset.n);
 let opElegida = '';
 if (p.ops && p.ops.length > 0) {
 let txt = p.ops.map((o, idx) => `${idx + 1}. ${o}`).join('\n');
@@ -382,14 +410,15 @@ const key = opElegida ? `${p.n}_${opElegida}` : p.n;
 $('#q').value = ''; $('#res').innerHTML = ''; lineas();
 });
 };
-$('#q').oninput = buscar;
+if ($('#q')) $('#q').oninput = buscar;
 el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
 S.filtro = S.filtro === b.dataset.f ? '' : b.dataset.f;
 el.querySelectorAll('[data-f]').forEach(x => x.className = x.dataset.f === S.filtro ? 'on' : 'sec'); buscar();
 });
+if ($('#env')) {
 $('#env').onclick = async () => {
-const err = $('#er'); err.className = 'err'; err.textContent = '';
-if (S.tipo === 'DELIVERY' && val('#tel').replace(/\D/g, '').length !== 10) { err.textContent = 'El teléfono tiene que tener 10 dígitos: código de área y número, sin 0 ni 15 (ej. 3794123456).'; return; }
+const err = $('#er'); if (err) { err.className = 'err'; err.textContent = ''; }
+if (S.tipo === 'DELIVERY' && val('#tel').replace(/\D/g, '').length !== 10) { if (err) err.textContent = 'El teléfono tiene que tener 10 dígitos: código de área y número, sin 0 ni 15 (ej. 3794123456).'; return; }
 const c = calc();
 const r = await api('crear_pedido', { 
 tipo: S.tipo, 
@@ -404,49 +433,62 @@ items: Object.values(S.items).map(i => ({ n: i.n, c: i.c, o: i.o, op: i.op })),
 usuario: ses.nombre, 
 ...(S.pago ? S.pago() : {}) 
 });
-if (r.error) { err.textContent = { pedido_vacio: 'Agregá al menos un producto.', faltan_datos: 'Completá la mesa o el nombre del cliente.', faltan_datos_de_envio: 'Para delivery cargá teléfono y dirección.', falta_metodo_pago: 'Elegí el método de pago.', telefono_invalido: 'El teléfono tiene que tener 10 dígitos, sin 0 ni 15.' }[r.error] || 'No se pudo enviar: ' + r.error; return; }
-S.items = {}; datos(); lineas();
-err.className = 'ok'; err.textContent = `Pedido ${r.id_cuenta} registrado${r.tanda ? ' y enviado a cocina (tanda ' + r.tanda + ')' : ' (solo bebidas: no pasa por cocina)'}.${r.vuelto ? ' Vuelto: ' + pesos(r.vuelto) : ''}`;
+if (r.error) { if (err) err.textContent = { pedido_vacio: 'Agregá al menos un producto.', faltan_datos: 'Completá la mesa o el nombre del cliente.', faltan_datos_de_envio: 'Para delivery cargá teléfono y dirección.', falta_metodo_pago: 'Elegí el método de pago.', telefono_invalido: 'El teléfono tiene que tener 10 dígitos, sin 0 ni 15.' }[r.error] || 'No se pudo enviar: ' + r.error; return; }
+resetFormulario();
+if (err) {
+err.className = 'ok';
+err.textContent = `Pedido ${r.id_cuenta} registrado${r.tanda ? ' y enviado a cocina (tanda ' + r.tanda + ')' : ' (solo bebidas: no pasa por cocina)'}.${r.vuelto ? ' Vuelto: ' + pesos(r.vuelto) : ''}`;
+}
 };
+}
 tipo('SALON'); lineas();
 return { mesas, cobrarMesa };
 }
 async function cierre(root, ses) {
 root.innerHTML = `<style>${CSS}${CSS2}</style><div class="cj"><div class="cl"><h1>Cerrar ventas</h1><p>Leyendo la jornada…</p></div></div>`;
 const C = await api('cierre_datos'), box = root.querySelector('.cl'), q = x => box.querySelectorAll(x);
-const volver = () => { box.querySelector('#vol').onclick = () => panel(root, ses); };
+const volver = () => { if (box.querySelector('#vol')) box.querySelector('#vol').onclick = () => panel(root, ses); };
 if (C.error) { box.innerHTML = '<h1>Cerrar ventas</h1><p class="err">No se pudo leer la jornada.</p><button id="vol">Volver a la caja</button>'; volver(); return; }
-if (C.bloqueos.length) { box.innerHTML = `<h1>Todavía no se puede cerrar</h1><ul>${C.bloqueos.map(b => `<li>${esc(b)}</li>`).join('')}</ul><button id="vol">Volver a la caja</button>`; volver(); return; }
-const pagos = C.pagos.reduce((t, x) => t + x.monto, 0);
+if (C.bloqueos && C.bloqueos.length) { box.innerHTML = `<h1>Todavía no se puede cerrar</h1><ul>${C.bloqueos.map(b => `<li>${esc(b)}</li>`).join('')}</ul><button id="vol">Volver a la caja</button>`; volver(); return; }
+const pagos = (C.pagos || []).reduce((t, x) => t + x.monto, 0);
 box.innerHTML = `<h1>Cerrar ventas</h1><label>Efectivo contado: cantidad de billetes</label><div class="gr">${DEN.map(d => `<div><b>${pesos(d)}</b><input type="number" min="0" inputmode="numeric" data-d="${d}" placeholder="0"></div>`).join('')}</div>
 <label>Transferencias recibidas</label><input id="tr" type="number" inputmode="numeric" placeholder="Total de transferencias">
-<label>Gastos</label><div id="gs"></div><button class="sec" id="mg" style="margin-top:.5rem">Agregar gasto</button>
-${C.pagos.length ? `<label>Pagos a repartidores (salen de la caja)</label>${C.pagos.map(x => `<div class="tot" style="margin:.2rem 0"><span>${esc(x.n)}</span><span>${pesos(x.monto)}</span></div>`).join('')}` : ''}
+<label>Gastos</label><div id="gs"></div><button type="button" class="sec" id="mg" style="margin-top:.5rem">Agregar gasto</button>
+${(C.pagos || []).length ? `<label>Pagos a repartidores (salen de la caja)</label>${(C.pagos || []).map(x => `<div class="tot" style="margin:.2rem 0"><span>${esc(x.n)}</span><span>${pesos(x.monto)}</span></div>`).join('')}` : ''}
 ${C.socio ? `<label>Corresponde al socio de bebidas hoy: <b>${pesos(C.socio)}</b></label><input id="ps" type="number" inputmode="numeric" placeholder="Pago al socio en efectivo (opcional)">` : '<input id="ps" type="hidden" value="0">'}
-<div id="bal" class="tt"></div><p class="err"></p><div id="acc"><button id="cer">Cerrar ventas</button><button class="sec" id="vol" style="margin-top:.6rem">Volver a la caja</button></div>`;
+<div id="bal" class="tt"></div><p class="err" id="ecier"></p><div id="acc"><button type="button" id="cer">Cerrar ventas</button><button type="button" class="sec" id="vol" style="margin-top:.6rem">Volver a la caja</button></div>`;
 volver();
 const leer = () => {
 const bil = {}; q('[data-d]').forEach(i => bil[i.dataset.d] = +i.value || 0);
 const gastos = [...q('#gs .gr')].map(r => { const [c, m] = r.querySelectorAll('input'); return { concepto: c.value.trim(), monto: +m.value || 0 }; });
-return { bil, gastos, contado: DEN.reduce((t, d) => t + d * (bil[d] || 0), 0), gm: gastos.filter(g => g.concepto && g.monto > 0).reduce((t, g) => t + g.monto, 0) + (+box.querySelector('#ps').value || 0) };
+return { bil, gastos, contado: DEN.reduce((t, d) => t + d * (bil[d] || 0), 0), gm: gastos.filter(g => g.concepto && g.monto > 0).reduce((t, g) => t + g.monto, 0) + (+box.querySelector('#ps')?.value || 0) };
 };
 const bal = () => {
-const L = leer(), esp = C.apertura + C.efvo + C.rendido - C.gastos - L.gm - pagos, dif = L.contado - esp, dt = (+box.querySelector('#tr').value || 0) - C.transf;
+const L = leer(), esp = (C.apertura || 0) + (C.efvo || 0) + (C.rendido || 0) - (C.gastos || 0) - L.gm - pagos, dif = L.contado - esp, dt = (+box.querySelector('#tr')?.value || 0) - (C.transf || 0);
 const txt = x => x === 0 ? 'cuadra' : (x > 0 ? 'sobran ' : 'faltan ') + pesos(Math.abs(x));
+if (box.querySelector('#bal')) {
 box.querySelector('#bal').innerHTML = `<div><span>Efectivo esperado</span><span>${pesos(esp)}</span></div><div><span>Efectivo contado</span><span>${pesos(L.contado)}</span></div>
-<div class="g"><span>Efectivo</span><span class="${dif === 0 ? 'ok' : ''}">${txt(dif)}</span></div><div><span>Transferencias en el sistema</span><span>${pesos(C.transf)}</span></div><div><span>Transferencias declaradas</span><span class="${dt === 0 ? 'ok' : ''}">${txt(dt)}</span></div>`;
+<div class="g"><span>Efectivo</span><span class="${dif === 0 ? 'ok' : ''}">${txt(dif)}</span></div><div><span>Transferencias en el sistema</span><span>${pesos(C.transf || 0)}</span></div><div><span>Transferencias declaradas</span><span class="${dt === 0 ? 'ok' : ''}">${txt(dt)}</span></div>`;
+}
 };
-const mas = () => { box.querySelector('#gs').insertAdjacentHTML('beforeend', '<div class="gr" style="margin-top:.4rem"><input placeholder="Concepto"><input type="number" inputmode="numeric" placeholder="Monto"></div>'); box.querySelectorAll('#gs input').forEach(i => i.oninput = bal); };
-box.querySelector('#mg').onclick = mas; q('[data-d],#tr,#ps').forEach(i => i.oninput = bal); mas(); bal();
+const mas = () => { if (box.querySelector('#gs')) { box.querySelector('#gs').insertAdjacentHTML('beforeend', '<div class="gr" style="margin-top:.4rem"><input placeholder="Concepto"><input type="number" inputmode="numeric" placeholder="Monto"></div>'); box.querySelectorAll('#gs input').forEach(i => i.oninput = bal); } };
+if (box.querySelector('#mg')) box.querySelector('#mg').onclick = mas; 
+q('[data-d],#tr,#ps').forEach(i => i.oninput = bal); mas(); bal();
+if (box.querySelector('#cer')) {
 box.querySelector('#cer').onclick = () => {
-box.querySelector('#acc').innerHTML = '<p><b>¿Estás seguro que querés cerrar?</b></p><div class="tp" style="grid-template-columns:1fr 1fr"><button id="si">Sí</button><button class="sec" id="no">No</button></div>';
-box.querySelector('#no').onclick = () => cierre(root, ses);
+if (box.querySelector('#acc')) {
+box.querySelector('#acc').innerHTML = '<p><b>¿Estás seguro que querés cerrar?</b></p><div class="tp" style="grid-template-columns:1fr 1fr"><button type="button" id="si">Sí</button><button type="button" class="sec" id="no">No</button></div>';
+if (box.querySelector('#no')) box.querySelector('#no').onclick = () => cierre(root, ses);
+if (box.querySelector('#si')) {
 box.querySelector('#si').onclick = async () => {
-const L = leer(), r = await api('cerrar_jornada', { nombre: ses.nombre, billetes: L.bil, gastos: L.gastos, transferencias: +box.querySelector('#tr').value || 0, pagoSocio: +box.querySelector('#ps').value || 0 });
+const L = leer(), r = await api('cerrar_jornada', { nombre: ses.nombre, billetes: L.bil, gastos: L.gastos, transferencias: +box.querySelector('#tr')?.value || 0, pagoSocio: +box.querySelector('#ps')?.value || 0 });
 if (r.error) { alert(r.error === 'hay_pendientes' ? 'Apareció algo pendiente: revisá la caja antes de cerrar.' : 'No se pudo cerrar: ' + r.error); return cierre(root, ses); }
-box.innerHTML = `<h1>Jornada cerrada</h1><div class="tt"><div><span>Efectivo esperado</span><span>${pesos(r.esperado)}</span></div><div><span>Efectivo contado</span><span>${pesos(r.contado)}</span></div><div class="g"><span>Diferencia</span><span>${pesos(r.diferencia)}</span></div></div><button id="fin">Listo</button>`;
-box.querySelector('#fin').onclick = () => { sessionStorage.removeItem('cajero'); login(root); };
+box.innerHTML = `<h1>Jornada cerrada</h1><div class="tt"><div><span>Efectivo esperado</span><span>${pesos(r.esperado)}</span></div><div><span>Efectivo contado</span><span>${pesos(r.contado)}</span></div><div class="g"><span>Diferencia</span><span>${pesos(r.diferencia)}</span></div></div><button type="button" id="fin">Listo</button>`;
+if (box.querySelector('#fin')) box.querySelector('#fin').onclick = () => { sessionStorage.removeItem('cajero'); login(root); };
 };
+}
+}
 };
+}
 }
 
