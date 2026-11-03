@@ -10,7 +10,7 @@ const CSS = `
 .gr{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}.gr div{display:flex;align-items:center;gap:.5rem}.gr b{min-width:4.5rem;text-align:right}
 .tot{display:flex;justify-content:space-between;font-size:1.3rem;font-weight:700;margin:1rem 0}.err{color:#f0b13c;min-height:1.4em}
 .ch{display:flex;justify-content:space-between;align-items:center;padding:.7rem 1.2rem;color:var(--tenue);border-bottom:1px solid #2a3340}
-.pn{display:grid;grid-template-columns:1.2fr 1fr;grid-template-rows:1fr 1fr;gap:.8rem;padding:.8rem;height:calc(100vh - 8rem)}
+.pn{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:.8rem;padding:.8rem;height:calc(100vh - 7rem)}
 .pn section{background:var(--card);border-radius:12px;padding:1rem;overflow:auto}.pn section:first-child{grid-row:1/3}
 .pn h2{margin:0 0 .5rem;font-size:1.1rem}.pn p{color:var(--tenue)}
 .dash-delivery-horiz{grid-column:1/3;background:var(--card);border-radius:12px;padding:.6rem .8rem;height:5.5rem;overflow-x:auto}
