@@ -13,7 +13,7 @@ const CSS = `
 .pn{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:.8rem;padding:.8rem;height:calc(100vh - 7rem)}
 .pn section{background:var(--card);border-radius:12px;padding:1rem;overflow:auto}.pn section:first-child{grid-row:1/3}
 .pn h2{margin:0 0 .5rem;font-size:1.1rem;color:var(--acento)}.pn p{color:var(--tenue)}
-.dash-delivery-horiz{grid-column:1/3;background:var(--card);border-radius:12px;padding:.6rem .8rem;height:5.5rem;overflow-x:auto;box-sizing:border-box}
+.dash-delivery-horiz{grid-column:1/3;background:var(--card);border-radius:12px;padding:.6rem .8rem;height:8rem;overflow-x:auto;box-sizing:border-box}
 .track-repartidores{display:flex;gap:.8rem;overflow-x:auto;padding-bottom:.2rem}
 .card-rep{background:#151a22;border-radius:8px;padding:.5rem .7rem;min-width:180px;border-left:4px solid var(--acento);flex-shrink:0}
 @media(max-width:900px){.pn{grid-template-columns:1fr;grid-template-rows:none;height:auto}.pn section:first-child{grid-row:auto}.dash-delivery-horiz{grid-column:auto;height:auto}}`;
