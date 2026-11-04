@@ -127,8 +127,8 @@ function imprimirTicketDirecto(pedidoData) {
 
   <div class="totales">
     <div class="totales-row"><span>Subtotal:</span> <span>${pForm(subtotal)}</span></div>
-    <div class="totales-row"><span>Costo de envíos:</span> <span>${envio > 0 ? pForm(envio) : pForm(0)}</span></div>
-    <div class="totales-row total-final"><span>TOTAL:</span> <span>${pForm(total)}</span></div>
+    <div class="totales-row"><span>Costo de envíos($0 "Envio bonificado"):</span> <span>${envio > 0 ? pForm(envio) : pForm(0)}</span></div>
+    <div class="totales-row total-final"><span>TOTAL(Con descuento solo si aplica):</span> <span>${pForm(total)}</span></div>
   </div>
 
   <div class="ahorro-footer">
