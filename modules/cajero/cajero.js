@@ -50,8 +50,8 @@ function imprimirTicketComanda(t) {
   const pForm = n => '$' + Number(n || 0).toLocaleString('es-AR');
 
   // Buscar en cache si existe el objeto completo guardado durante la carga
-  const cacheKey = String(t.id || t.id_cuenta || '');
-  const datosCompletos = pedidosCache.get(cacheKey) || t;
+  const cacheKey = String(t.id || t.id_cuenta || t.id_pedido || '');
+  const datosCompletos = pedidosCache.get(cacheKey) || pedidosCache.get('ULTIMO') || t;
 
   const cliente = escH(datosCompletos.cliente || datosCompletos.tit || 'Cliente General');
   const nivel = escH(datosCompletos.nivel_cliente || datosCompletos.nivel || 'Cliente');
@@ -536,7 +536,9 @@ $('#res').querySelectorAll('button').forEach(b => b.onclick = () => {
 const p = (D.catalogo || []).find(x => x.n === b.dataset.n);
 let opElegida = '';
 if (p.ops && p.ops.length > 0) {
-let txt = p.ops.map((o, idx) => `${idx + 1}. ${o}`).join('\n'); let sel = prompt(`Elegí la opción de bebida para ${p.n}:\n${txt}`, "1");
+let txt = p.ops.map((o, idx) => `${idx + 1}. ${o}`).join('
+');
+let sel = prompt(`Elegí la opción de bebida para ${p.n}:\n${txt}`, "1");
 let idx = parseInt(sel) - 1;
 if (isNaN(idx) || !p.ops[idx]) return alert('Opción inválida.');
 opElegida = p.ops[idx];
