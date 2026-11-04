@@ -37,6 +37,119 @@ const CSS2 = `
 .stock-low{color:var(--alerta);font-weight:bold}
 .stock-ok{color:var(--exito);font-weight:bold}
 .lbl-stock-cat{font-size:.8rem;padding:.15rem .4rem;border-radius:4px;display:inline-block;margin-left:.3rem}`;
+
+/**
+ * Genera e imprime el ticket/comanda digital de BEBECHOFOODCTES directamente con datos de la carga
+ */
+function imprimirTicketDirecto(pedidoData) {
+  if (!pedidoData) return;
+  const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const pForm = n => '$' + Number(n || 0).toLocaleString('es-AR');
+
+  const cliente = escH(pedidoData.cliente || 'Cliente General');
+  const nivel = escH(pedidoData.nivel_cliente || 'Cliente');
+  const direccion = escH(pedidoData.direccion || (pedidoData.tipo === 'SALON' ? 'Mesa ' + (pedidoData.mesa || '') : 'Retiro en local'));
+  const items = pedidoData.items || [];
+  const subtotal = Number(pedidoData.subtotal || 0);
+  const envio = Number(pedidoData.envio || 0);
+  const total = Number(pedidoData.total || 0);
+  const ahorro = Number(pedidoData.ahorro || 0);
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ticket - ${cliente}</title>
+<style>
+  @page { size: 80mm auto; margin: 2mm; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; margin: 0; padding: 4mm; background: #fff; }
+  .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }
+  .title { font-size: 15px; font-weight: bold; margin: 2px 0; }
+  .info { font-size: 9.5px; margin-bottom: 4px; line-height: 1.2; }
+  .sucursal { font-weight: bold; margin-top: 3px; }
+  .cerrado { font-weight: bold; font-size: 10px; margin: 3px 0; }
+  .redes { font-size: 9.5px; margin-top: 3px; }
+  .datos-cliente { border-bottom: 1px solid #000; padding: 4px 0; margin-bottom: 6px; font-size: 10.5px; }
+  .datos-cliente div { margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 10.5px; }
+  th, td { border: 1px solid #000; padding: 3px 2px; }
+  th { background: #eee; font-weight: bold; text-align: center; }
+  .num { text-align: right; }
+  .cen { text-align: center; }
+  .totales { border-top: 1px solid #000; padding-top: 4px; font-size: 10.5px; }
+  .totales-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+  .total-final { font-size: 13px; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; margin-top: 3px; }
+  .ahorro-footer { font-size: 13px; font-weight: bold; font-style: italic; text-align: center; margin-top: 10px; padding: 4px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">BEBECHOFOODCTES</div>
+    <div class="info">
+      <div class="sucursal">ESTRELLA GUTIERREZ 3320</div>
+      Martes a Miércoles 20 a 00 y Jueves 21 a 01
+      <div class="sucursal">CAVADRINKS MAIPU 2775</div>
+      Viernes y Sábados 21 a 01, Domingos 20 a 00
+      <div class="cerrado">*** LUNES CERRADO ***</div>
+    </div>
+    <div class="redes">
+      WA: 3794000944<br>
+      IG: @bebechofoodctes y @cava.drinks
+    </div>
+  </div>
+
+  <div class="datos-cliente">
+    <div><b>SEÑOR(ES):</b> ${cliente}</div>
+    <div><b>NIVEL DE CLIENTE:</b> ${nivel}</div>
+    <div><b>DIRECCIÓN:</b> ${direccion}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:12%">Cant</th>
+        <th style="width:48%">Descripción</th>
+        <th style="width:20%">Importe</th>
+        <th style="width:20%">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map(i => `
+        <tr>
+          <td class="cen">${i.c || i.cant || 1}</td>
+          <td>${escH(i.n || i.nombre || i.desc || i)}${i.op ? ' (' + escH(i.op) + ')' : ''}</td>
+          <td class="num">${pForm(i.p || i.precio || 0)}</td>
+          <td class="num">${pForm((i.p || i.precio || 0) * (i.c || i.cant || 1))}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+
+  <div class="totales">
+    <div class="totales-row"><span>Subtotal:</span> <span>${pForm(subtotal)}</span></div>
+    <div class="totales-row"><span>Costo de envíos:</span> <span>${envio > 0 ? pForm(envio) : pForm(0)}</span></div>
+    <div class="totales-row total-final"><span>TOTAL:</span> <span>${pForm(total)}</span></div>
+  </div>
+
+  <div class="ahorro-footer">
+    *** Ahorraste ${pForm(ahorro)}!! ***
+  </div>
+
+  <script>
+    window.onload = () => { window.print(); };
+  </script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank', 'width=400,height=600');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  } else {
+    alert('Por favor autorizá los pop-ups para imprimir el ticket.');
+  }
+}
+
 let ctx, timers = [];
 function beep() {
 try { ctx ??= new AudioContext(); ctx.resume(); const o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; g.gain.value = .2; o.start(); o.stop(ctx.currentTime + .25); } catch {}
@@ -399,8 +512,7 @@ $('#res').querySelectorAll('button').forEach(b => b.onclick = () => {
 const p = (D.catalogo || []).find(x => x.n === b.dataset.n);
 let opElegida = '';
 if (p.ops && p.ops.length > 0) {
-let txt = p.ops.map((o, idx) => `${idx + 1}. ${o}`).join('\n');
-let sel = prompt(`Elegí la opción de bebida para ${p.n}:\n${txt}`, "1");
+let txt = p.ops.map((o, idx) => `${idx + 1}. ${o}`).join('\n'); let sel = prompt(`Elegí la opción de bebida para ${p.n}:\n${txt}`, "1");
 let idx = parseInt(sel) - 1;
 if (isNaN(idx) || !p.ops[idx]) return alert('Opción inválida.');
 opElegida = p.ops[idx];
@@ -420,6 +532,22 @@ $('#env').onclick = async () => {
 const err = $('#er'); if (err) { err.className = 'err'; err.textContent = ''; }
 if (S.tipo === 'DELIVERY' && val('#tel').replace(/\D/g, '').length !== 10) { if (err) err.textContent = 'El teléfono tiene que tener 10 dígitos: código de área y número, sin 0 ni 15 (ej. 3794123456).'; return; }
 const c = calc();
+
+// Preparación completa de datos puros desde la carga antes del envío y reset
+const itemsParaTicket = Object.values(S.items).map(i => ({ n: i.n, c: i.c, p: i.p, o: i.o, op: i.op }));
+const datosTicket = {
+  tipo: S.tipo,
+  mesa: val('#mesa'),
+  cliente: val('#nom') || 'Cliente General',
+  nivel_cliente: c.nivel || 'Cliente',
+  direccion: val('#dir') || (S.tipo === 'SALON' ? 'Mesa ' + (val('#mesa') || '') : 'Retiro en local'),
+  items: itemsParaTicket,
+  subtotal: c.sub,
+  envio: c.envioCliente,
+  total: c.total,
+  ahorro: c.ahorro
+};
+
 const r = await api('crear_pedido', { 
 tipo: S.tipo, 
 mesa: val('#mesa'), 
@@ -434,6 +562,12 @@ usuario: ses.nombre,
 ...(S.pago ? S.pago() : {}) 
 });
 if (r.error) { if (err) err.textContent = { pedido_vacio: 'Agregá al menos un producto.', faltan_datos: 'Completá la mesa o el nombre del cliente.', faltan_datos_de_envio: 'Para delivery cargá teléfono y dirección.', falta_metodo_pago: 'Elegí el método de pago.', telefono_invalido: 'El teléfono tiene que tener 10 dígitos, sin 0 ni 15.' }[r.error] || 'No se pudo enviar: ' + r.error; return; }
+
+// Notificación/Confirmación inmediata para imprimir ticket
+if (confirm('¿Deseás imprimir el ticket de compra?')) {
+  imprimirTicketDirecto(datosTicket);
+}
+
 resetFormulario();
 if (err) {
 err.className = 'ok';
