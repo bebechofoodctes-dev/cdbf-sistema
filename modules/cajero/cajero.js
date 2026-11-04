@@ -536,10 +536,7 @@ $('#res').querySelectorAll('button').forEach(b => b.onclick = () => {
 const p = (D.catalogo || []).find(x => x.n === b.dataset.n);
 let opElegida = '';
 if (p.ops && p.ops.length > 0) {
-let txt = p.ops.map((o, idx) => `${idx + 1}. ${o}`).join('
-');
-let sel = prompt(`Elegí la opción de bebida para ${p.n}:
-${txt}`, "1");
+let txt = p.ops.map((o, idx) => `${idx + 1}. ${o}`).join('\n'); let sel = prompt(`Elegí la opción de bebida para ${p.n}:\n${txt}`, "1");
 let idx = parseInt(sel) - 1;
 if (isNaN(idx) || !p.ops[idx]) return alert('Opción inválida.');
 opElegida = p.ops[idx];
