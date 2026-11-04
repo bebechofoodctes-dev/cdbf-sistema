@@ -37,6 +37,123 @@ const CSS2 = `
 .stock-low{color:var(--alerta);font-weight:bold}
 .stock-ok{color:var(--exito);font-weight:bold}
 .lbl-stock-cat{font-size:.8rem;padding:.15rem .4rem;border-radius:4px;display:inline-block;margin-left:.3rem}`;
+
+function imprimirTicketComanda(t) {
+  if (!t) return;
+  const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const pForm = n => '$' + Number(n || 0).toLocaleString('es-AR');
+  const cliente = escH(t.cliente || t.tit || 'Cliente General');
+  const nivel = escH(t.nivel_cliente || t.nivel || 'Cliente');
+  const direccion = escH(t.dir || t.direccion || (t.tipo === 'SALON' ? 'Mesa ' + (t.mesa || '') : 'Retiro en local'));
+  const items = t.items || t.productos || [];
+  
+  let subCalc = 0;
+  items.forEach(i => {
+    const cant = Number(i.cant || i.c || i.cantidad || 1);
+    const pr = Number(i.precio || i.p || i.importe || 0);
+    subCalc += (pr * cant);
+  });
+  
+  const subtotal = Number(t.subtotal ?? subCalc);
+  const envio = Number(t.envio ?? t.costo_envio ?? 0);
+  const total = Number(t.total ?? (subtotal + envio));
+  const ahorro = Number(t.ahorro ?? (t.descuento || (subtotal + envio > total ? (subtotal + envio) - total : 0)));
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ticket - ${cliente}</title>
+<style>
+  @page { size: 80mm auto; margin: 2mm; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; margin: 0; padding: 4mm; background: #fff; }
+  .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }
+  .title { font-size: 15px; font-weight: bold; margin: 2px 0; }
+  .info { font-size: 9.5px; margin-bottom: 4px; line-height: 1.2; }
+  .sucursal { font-weight: bold; margin-top: 3px; }
+  .cerrado { font-weight: bold; font-size: 10px; margin: 3px 0; }
+  .redes { font-size: 9.5px; margin-top: 3px; }
+  .datos-cliente { border-bottom: 1px solid #000; padding: 4px 0; margin-bottom: 6px; font-size: 10.5px; }
+  .datos-cliente div { margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 10.5px; }
+  th, td { border: 1px solid #000; padding: 3px 2px; }
+  th { background: #eee; font-weight: bold; text-align: center; }
+  .num { text-align: right; }
+  .cen { text-align: center; }
+  .totales { border-top: 1px solid #000; padding-top: 4px; font-size: 10.5px; }
+  .totales-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+  .total-final { font-size: 13px; font-weight: bold; border-top: 1px solid #000; padding-top: 3px; margin-top: 3px; }
+  .ahorro-footer { font-size: 13px; font-weight: bold; font-style: italic; text-align: center; margin-top: 10px; padding: 4px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">BEBECHOFOODCTES</div>
+    <div class="info">
+      <div class="sucursal">ESTRELLA GUTIERREZ 3320</div>
+      Martes a Miércoles 20 a 00 y Jueves 21 a 01
+      <div class="sucursal">CAVADRINKS MAIPU 2775</div>
+      Viernes y Sábados 21 a 01, Domingos 20 a 00
+      <div class="cerrado">*** LUNES CERRADO ***</div>
+    </div>
+    <div class="redes">
+      WA: 3794000944<br>
+      IG: @bebechofoodctes y @cava.drinks
+    </div>
+  </div>
+
+  <div class="datos-cliente">
+    <div><b>SEÑOR(ES):</b> ${cliente}</div>
+    <div><b>NIVEL DE CLIENTE:</b> ${nivel}</div>
+    <div><b>DIRECCIÓN:</b> ${direccion}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:12%">Cant</th>
+        <th style="width:48%">Descripción</th>
+        <th style="width:20%">Importe</th>
+        <th style="width:20%">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.length ? items.map(i => `
+        <tr>
+          <td class="cen">${i.cant || i.c || i.cantidad || 1}</td>
+          <td>${escH(i.n || i.nombre || i.desc || i.descripcion || i)}${i.op ? ' (' + escH(i.op) + ')' : ''}</td>
+          <td class="num">${pForm(i.precio || i.p || i.importe || 0)}</td>
+          <td class="num">${pForm((i.precio || i.p || i.importe || 0) * (i.cant || i.c || i.cantidad || 1))}</td>
+        </tr>
+      `).join('') : `<tr><td colspan="4" class="cen">${escH(t.resumen || 'Sin detalle de productos')}</td></tr>`}
+    </tbody>
+  </table>
+
+  <div class="totales">
+    <div class="totales-row"><span>Subtotal:</span> <span>${pForm(subtotal)}</span></div>
+    <div class="totales-row"><span>Costo de envíos:</span> <span>${envio > 0 ? pForm(envio) : pForm(0)}</span></div>
+    <div class="totales-row total-final"><span>TOTAL:</span> <span>${pForm(total)}</span></div>
+  </div>
+
+  <div class="ahorro-footer">
+    *** Ahorraste ${pForm(ahorro)}!! ***
+  </div>
+
+  <script>
+    window.onload = () => { window.print(); };
+  </script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank', 'width=400,height=600');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  } else {
+    alert('Por favor autorizá los pop-ups para imprimir el ticket.');
+  }
+}
+
 let ctx, timers = [];
 function beep() {
 try { ctx ??= new AudioContext(); ctx.resume(); const o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; g.gain.value = .2; o.start(); o.stop(ctx.currentTime + .25); } catch {}
@@ -142,7 +259,7 @@ $('#mc').innerHTML = R.cocina.map(t => `
 <div class="mi ${t.estado} ${flash.has(t.id) ? 'flash' : ''}">
 <b>#${esc(t.id)} - ${esc(t.tit || t.cliente || 'Pedido')}</b><span>${ETQ[t.estado] || esc(t.estado)}</span>
 <small>${esc(t.tipo || 'SALON')}, hace ${hace(t.envio || t.fecha)} ${t.resumen ? '<br>' + esc(t.resumen) : ''}</small>
-${t.estado !== 'ENTREGADO' ? `<button class="sec" data-x="${esc(t.id)}" style="grid-column:1/3;padding:.4rem;margin-top:.4rem">Cancelar pedido</button>` : ''}
+${t.estado !== 'ENTREGADO' ? `<div style="grid-column:1/3;display:flex;gap:.4rem;margin-top:.4rem"><button class="sec" data-x="${esc(t.id)}" style="flex:1;padding:.4rem">Cancelar pedido</button><button class="sec" data-imp="${esc(t.id)}" style="flex:1;padding:.4rem">Imprimir ticket</button></div>` : `<div style="grid-column:1/3;margin-top:.4rem"><button class="sec" data-imp="${esc(t.id)}" style="width:100%;padding:.4rem">Imprimir ticket</button></div>`}
 </div>`).join('') || '<p style="color:var(--tenue)">Sin pedidos en cocina.</p>';
 $('#mc').querySelectorAll('[data-x]').forEach(b => b.onclick = async () => {
 if (!confirm('¿Seguro que querés cancelar este pedido?')) return;
@@ -150,6 +267,10 @@ const m = prompt('Motivo de la cancelación:'); if (!m) return;
 const r = await api('cancelar_tanda', { id: b.dataset.x, motivo: m, usuario: ses.nombre });
 if (r.error) alert('No se pudo cancelar: ' + r.error);
 v = ''; cargar();
+});
+$('#mc').querySelectorAll('[data-imp]').forEach(b => b.onclick = () => {
+const ped = R.cocina.find(x => String(x.id) === String(b.dataset.imp));
+if (ped) imprimirTicketComanda(ped);
 });
 if ($('#mr')) {
 $('#mr').innerHTML = R.repartos.map(x => `
