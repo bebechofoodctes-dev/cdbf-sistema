@@ -38,26 +38,37 @@ const CSS2 = `
 .stock-ok{color:var(--exito);font-weight:bold}
 .lbl-stock-cat{font-size:.8rem;padding:.15rem .4rem;border-radius:4px;display:inline-block;margin-left:.3rem}`;
 
+// Memoria global de datos completos por id_cuenta / id de pedido
+const pedidosCache = new Map();
+
+/**
+ * Función para imprimir el ticket/comanda con los datos completos del pedido
+ */
 function imprimirTicketComanda(t) {
   if (!t) return;
   const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const pForm = n => '$' + Number(n || 0).toLocaleString('es-AR');
-  const cliente = escH(t.cliente || t.tit || 'Cliente General');
-  const nivel = escH(t.nivel_cliente || t.nivel || 'Cliente');
-  const direccion = escH(t.dir || t.direccion || (t.tipo === 'SALON' ? 'Mesa ' + (t.mesa || '') : 'Retiro en local'));
-  const items = t.items || t.productos || [];
+
+  // Buscar en cache si existe el objeto completo guardado durante la carga
+  const cacheKey = String(t.id || t.id_cuenta || '');
+  const datosCompletos = pedidosCache.get(cacheKey) || t;
+
+  const cliente = escH(datosCompletos.cliente || datosCompletos.tit || 'Cliente General');
+  const nivel = escH(datosCompletos.nivel_cliente || datosCompletos.nivel || 'Cliente');
+  const direccion = escH(datosCompletos.direccion || datosCompletos.dir || (datosCompletos.tipo === 'SALON' ? 'Mesa ' + (datosCompletos.mesa || '') : 'Retiro en local'));
+  const items = datosCompletos.items || datosCompletos.productos || [];
   
   let subCalc = 0;
   items.forEach(i => {
-    const cant = Number(i.cant || i.c || i.cantidad || 1);
-    const pr = Number(i.precio || i.p || i.importe || 0);
+    const cant = Number(i.c || i.cant || i.cantidad || 1);
+    const pr = Number(i.p || i.precio || i.importe || 0);
     subCalc += (pr * cant);
   });
   
-  const subtotal = Number(t.subtotal ?? subCalc);
-  const envio = Number(t.envio ?? t.costo_envio ?? 0);
-  const total = Number(t.total ?? (subtotal + envio));
-  const ahorro = Number(t.ahorro ?? (t.descuento || (subtotal + envio > total ? (subtotal + envio) - total : 0)));
+  const subtotal = Number(datosCompletos.subtotal ?? subCalc);
+  const envio = Number(datosCompletos.envio ?? datosCompletos.costo_envio ?? 0);
+  const total = Number(datosCompletos.total ?? (subtotal + envio));
+  const ahorro = Number(datosCompletos.ahorro ?? (datosCompletos.descuento || (subtotal + envio > total ? (subtotal + envio) - total : 0)));
 
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -118,14 +129,19 @@ function imprimirTicketComanda(t) {
       </tr>
     </thead>
     <tbody>
-      ${items.length ? items.map(i => `
+      ${items.length ? items.map(i => {
+        const cant = Number(i.c || i.cant || i.cantidad || 1);
+        const precio = Number(i.p || i.precio || i.importe || 0);
+        const desc = escH(i.n || i.nombre || i.desc || i.descripcion || i);
+        const op = i.op ? ' (' + escH(i.op) + ')' : '';
+        return `
         <tr>
-          <td class="cen">${i.cant || i.c || i.cantidad || 1}</td>
-          <td>${escH(i.n || i.nombre || i.desc || i.descripcion || i)}${i.op ? ' (' + escH(i.op) + ')' : ''}</td>
-          <td class="num">${pForm(i.precio || i.p || i.importe || 0)}</td>
-          <td class="num">${pForm((i.precio || i.p || i.importe || 0) * (i.cant || i.c || i.cantidad || 1))}</td>
-        </tr>
-      `).join('') : `<tr><td colspan="4" class="cen">${escH(t.resumen || 'Sin detalle de productos')}</td></tr>`}
+          <td class="cen">${cant}</td>
+          <td>${desc}${op}</td>
+          <td class="num">${pForm(precio)}</td>
+          <td class="num">${pForm(precio * cant)}</td>
+        </tr>`;
+      }).join('') : `<tr><td colspan="4" class="cen">${escH(datosCompletos.resumen || 'Sin detalle de productos')}</td></tr>`}
     </tbody>
   </table>
 
@@ -520,8 +536,10 @@ $('#res').querySelectorAll('button').forEach(b => b.onclick = () => {
 const p = (D.catalogo || []).find(x => x.n === b.dataset.n);
 let opElegida = '';
 if (p.ops && p.ops.length > 0) {
-let txt = p.ops.map((o, idx) => `${idx + 1}. ${o}`).join('\n');
-let sel = prompt(`Elegí la opción de bebida para ${p.n}:\n${txt}`, "1");
+let txt = p.ops.map((o, idx) => `${idx + 1}. ${o}`).join('
+');
+let sel = prompt(`Elegí la opción de bebida para ${p.n}:
+${txt}`, "1");
 let idx = parseInt(sel) - 1;
 if (isNaN(idx) || !p.ops[idx]) return alert('Opción inválida.');
 opElegida = p.ops[idx];
@@ -541,6 +559,23 @@ $('#env').onclick = async () => {
 const err = $('#er'); if (err) { err.className = 'err'; err.textContent = ''; }
 if (S.tipo === 'DELIVERY' && val('#tel').replace(/\D/g, '').length !== 10) { if (err) err.textContent = 'El teléfono tiene que tener 10 dígitos: código de área y número, sin 0 ni 15 (ej. 3794123456).'; return; }
 const c = calc();
+const itemsParaGuardar = Object.values(S.items).map(i => ({ n: i.n, c: i.c, p: i.p, o: i.o, op: i.op }));
+
+// Objeto de pedido capturado 100% de la carga de pedidos antes del reset
+const pedidoCompletoCargado = {
+  tipo: S.tipo,
+  mesa: val('#mesa'),
+  cliente: val('#nom') || 'Cliente General',
+  nivel_cliente: c.nivel || 'Cliente',
+  direccion: val('#dir') || (S.tipo === 'SALON' ? 'Mesa ' + (val('#mesa') || '') : 'Retiro en local'),
+  telefono: val('#tel'),
+  items: itemsParaGuardar,
+  subtotal: c.sub,
+  envio: c.envioCliente,
+  total: c.total,
+  ahorro: c.ahorro
+};
+
 const r = await api('crear_pedido', { 
 tipo: S.tipo, 
 mesa: val('#mesa'), 
@@ -550,11 +585,21 @@ direccion: val('#dir'),
 km: c.km,
 envio: c.envioBase,
 envioBonificado: c.bonificado,
-items: Object.values(S.items).map(i => ({ n: i.n, c: i.c, o: i.o, op: i.op })), 
+items: itemsParaGuardar, 
 usuario: ses.nombre, 
 ...(S.pago ? S.pago() : {}) 
 });
 if (r.error) { if (err) err.textContent = { pedido_vacio: 'Agregá al menos un producto.', faltan_datos: 'Completá la mesa o el nombre del cliente.', faltan_datos_de_envio: 'Para delivery cargá teléfono y dirección.', falta_metodo_pago: 'Elegí el método de pago.', telefono_invalido: 'El teléfono tiene que tener 10 dígitos, sin 0 ni 15.' }[r.error] || 'No se pudo enviar: ' + r.error; return; }
+
+// Guardar en cache relacionando con la cuenta / pedido creado
+if (r.id_cuenta) {
+  pedidosCache.set(String(r.id_cuenta), pedidoCompletoCargado);
+}
+if (r.tanda) {
+  pedidosCache.set(String(r.tanda), pedidoCompletoCargado);
+}
+pedidosCache.set('ULTIMO', pedidoCompletoCargado);
+
 resetFormulario();
 if (err) {
 err.className = 'ok';
@@ -612,4 +657,3 @@ if (box.querySelector('#fin')) box.querySelector('#fin').onclick = () => { sessi
 };
 }
 }
-
