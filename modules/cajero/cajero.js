@@ -127,8 +127,8 @@ function imprimirTicketDirecto(pedidoData) {
 
   <div class="totales">
     <div class="totales-row"><span>Subtotal:</span> <span>${pForm(subtotal)}</span></div>
-    <div class="totales-row"><span>Costo de envíos($0 "Envio bonificado"):</span> <span>${envio > 0 ? pForm(envio) : pForm(0)}</span></div>
-    <div class="totales-row total-final"><span>TOTAL(Con descuento solo si aplica):</span> <span>${pForm(total)}</span></div>
+    <div class="totales-row"><span>Costo de envíos:</span> <span>${envio > 0 ? pForm(envio) : pForm(0)}</span></div>
+    <div class="totales-row total-final"><span>TOTAL:</span> <span>${pForm(total)}</span></div>
   </div>
 
   <div class="ahorro-footer">
@@ -335,7 +335,11 @@ el.innerHTML = `<h2>Carga de pedidos</h2><div class="tp">${Object.keys(NOMBRES).
 <div class="tp"><button type="button" class="sec" data-f="COMIDA">Comidas</button><button type="button" class="sec" data-f="BEBIDA">Bebidas</button><button type="button" class="sec" data-f="COMBO">Combos</button></div>
 <input id="q" placeholder="Buscar producto…" autocomplete="off"><div class="rs" id="res"></div>
 </div>
-<div id="car"></div><div class="tt" id="tt"></div><div id="pago"></div><p class="err" id="er"></p><button type="button" id="env">CARGAR PEDIDO</button>
+<div id="car"></div><div class="tt" id="tt"></div><div id="pago"></div><p class="err" id="er"></p>
+<div style="display:flex;gap:.5rem;margin-top:.5rem">
+  <button type="button" id="env" style="flex:1">CARGAR PEDIDO</button>
+  <button type="button" class="sec" id="btnPrint" style="flex:1;background:#2d3846;color:var(--txt)">🖨️ GENERAR TICKET</button>
+</div>
 <datalist id="cl">${(D.clientes || []).map(c => `<option value="${esc(c.n)}">`).join('')}</datalist>`;
 const obtenerPrecioEnvioCalculado = (km) => {
 const tarifas = D.tarifas_envio || [];
@@ -527,26 +531,40 @@ el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
 S.filtro = S.filtro === b.dataset.f ? '' : b.dataset.f;
 el.querySelectorAll('[data-f]').forEach(x => x.className = x.dataset.f === S.filtro ? 'on' : 'sec'); buscar();
 });
+
+// Función auxiliar para armar los datos del ticket desde el estado actual del módulo
+const obtenerDatosActuales = () => {
+  const c = calc();
+  const itemsParaTicket = Object.values(S.items).map(i => ({ n: i.n, c: i.c, p: i.p, o: i.o, op: i.op }));
+  return {
+    tipo: S.tipo,
+    mesa: val('#mesa'),
+    cliente: val('#nom') || 'Cliente General',
+    nivel_cliente: c.nivel || 'Cliente',
+    direccion: val('#dir') || (S.tipo === 'SALON' ? 'Mesa ' + (val('#mesa') || '') : 'Retiro en local'),
+    items: itemsParaTicket,
+    subtotal: c.sub,
+    envio: c.envioCliente,
+    total: c.total,
+    ahorro: c.ahorro
+  };
+};
+
+if ($('#btnPrint')) {
+  $('#btnPrint').onclick = () => {
+    if (Object.keys(S.items).length === 0) {
+      alert('Agregá al menos un producto para generar el ticket.');
+      return;
+    }
+    imprimirTicketDirecto(obtenerDatosActuales());
+  };
+}
+
 if ($('#env')) {
 $('#env').onclick = async () => {
 const err = $('#er'); if (err) { err.className = 'err'; err.textContent = ''; }
 if (S.tipo === 'DELIVERY' && val('#tel').replace(/\D/g, '').length !== 10) { if (err) err.textContent = 'El teléfono tiene que tener 10 dígitos: código de área y número, sin 0 ni 15 (ej. 3794123456).'; return; }
 const c = calc();
-
-// Preparación completa de datos puros desde la carga antes del envío y reset
-const itemsParaTicket = Object.values(S.items).map(i => ({ n: i.n, c: i.c, p: i.p, o: i.o, op: i.op }));
-const datosTicket = {
-  tipo: S.tipo,
-  mesa: val('#mesa'),
-  cliente: val('#nom') || 'Cliente General',
-  nivel_cliente: c.nivel || 'Cliente',
-  direccion: val('#dir') || (S.tipo === 'SALON' ? 'Mesa ' + (val('#mesa') || '') : 'Retiro en local'),
-  items: itemsParaTicket,
-  subtotal: c.sub,
-  envio: c.envioCliente,
-  total: c.total,
-  ahorro: c.ahorro
-};
 
 const r = await api('crear_pedido', { 
 tipo: S.tipo, 
@@ -562,11 +580,6 @@ usuario: ses.nombre,
 ...(S.pago ? S.pago() : {}) 
 });
 if (r.error) { if (err) err.textContent = { pedido_vacio: 'Agregá al menos un producto.', faltan_datos: 'Completá la mesa o el nombre del cliente.', faltan_datos_de_envio: 'Para delivery cargá teléfono y dirección.', falta_metodo_pago: 'Elegí el método de pago.', telefono_invalido: 'El teléfono tiene que tener 10 dígitos, sin 0 ni 15.' }[r.error] || 'No se pudo enviar: ' + r.error; return; }
-
-// Notificación/Confirmación inmediata para imprimir ticket
-if (confirm('¿Deseás imprimir el ticket de compra?')) {
-  imprimirTicketDirecto(datosTicket);
-}
 
 resetFormulario();
 if (err) {
