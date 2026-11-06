@@ -25,10 +25,9 @@ function login(root, aviso = '') {
   const pinInput = root.querySelector('#pin');
   const btnOk = root.querySelector('#ok');
 
-  // Forzar el foco de manera segura usando setTimeout para asegurar que el DOM ya se pintó
   setTimeout(() => {
     pinInput.focus();
-    pinInput.click(); // Ayuda en algunos navegadores móviles a invocar el teclado virtual
+    pinInput.click();
   }, 50);
 
   const entrar = async () => {
@@ -52,26 +51,34 @@ function tablero(root) {
 
   const barras = (L, fmt) => { const mx = Math.max(1, ...L.map(x => x.m)); return L.map(x => `<div class="row"><span>${esc(x.n)}</span><i style="width:${Math.max(2, x.m / mx * 100)}%"></i><b>${fmt(x.m)}</b></div>`).join('') || '<p style="color:var(--tenue)">Sin datos en este período.</p>'; };
 
-  async function reportes(f = { desde: iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), hasta: iso(hoy), tipo: '', producto: '' }, lista = []) {
+  async function reportes(f = { desde: iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), hasta: iso(hoy), tipo: '', categorias: [] }, listaCategorias = []) {
     vista.innerHTML = '<p>Calculando…</p>';
     const r = await api('admin_datos', { token, ...f });
     if (r.error === 'no_autorizado') return salir();
     if (r.error) { vista.innerHTML = `<p class="err">No se pudo leer Operacion (${esc(r.error)}).</p>`; return; }
-    lista = lista.length ? lista : r.lista; const T = r.totales, mx = Math.max(1, ...r.dias.map(d => d.m));
+    listaCategorias = listaCategorias.length ? listaCategorias : (r.listaCategorias || []); 
+    const T = r.totales, mx = Math.max(1, ...r.dias.map(d => d.m));
+    
     vista.innerHTML = `<div class="bar"><div><label>Desde</label><input type="date" id="d" value="${f.desde}"></div><div><label>Hasta</label><input type="date" id="h" value="${f.hasta}"></div>
       <div><label>Tipo de entrega</label><select id="t"><option value="">Todos</option>${Object.keys(NOMBRE).map(k => `<option value="${k}" ${f.tipo === k ? 'selected' : ''}>${NOMBRE[k]}</option>`).join('')}</select></div>
-      <div><label>Producto</label><select id="p"><option value="">Todos</option>${lista.map(x => `<option ${f.producto === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div><button id="go">Actualizar</button><button class="sec np" id="pdf">Descargar PDF</button><button class="sec np" id="mail">Enviar por correo</button><span id="msg" class="np"></span></div>
+      <div><label>Categorías (Múltiples)</label><select id="cat" multiple style="height:2.4rem;min-width:10rem">${listaCategorias.map(x => `<option value="${esc(x)}" ${(f.categorias || []).includes(x) ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
+      <button id="go">Actualizar</button><button class="sec np" id="pdf">Descargar PDF</button><button class="sec np" id="mail">Enviar por correo</button><span id="msg" class="np"></span></div>
       <div class="kpis"><div class="kpi"><span>Ventas</span><b>${pesos(T.ventas)}</b></div><div class="kpi"><span>Pedidos</span><b>${T.pedidos}</b></div><div class="kpi"><span>Ticket promedio</span><b>${pesos(T.ticket)}</b></div>
       <div class="kpi"><span>Efectivo / transferencia</span><b>${pesos(T.efectivo)} / ${pesos(T.transferencia)}</b></div><div class="kpi"><span>Envíos sin cargo</span><b>${T.sinCargo}</b><span>${pesos(T.sinCargoMonto)} desde la caja</span></div>
       <div class="kpi"><span>Corresponde al socio</span><b>${pesos(T.socio.corresponde)}</b><span>Pagado ${pesos(T.socio.pagado)}, saldo ${pesos(T.socio.saldo)}</span></div><div class="kpi"><span>Nuestra parte</span><b>${pesos(T.socio.propia)}</b></div></div>
       <div class="gr"><div class="box"><h2>Ventas por día</h2><div class="dias">${r.dias.map(d => `<div title="${d.f}: ${pesos(d.m)}"><i style="height:${Math.max(2, d.m / mx * 100)}%"></i>${d.f.slice(8)}/${d.f.slice(5, 7)}</div>`).join('') || '<p style="color:var(--tenue)">Sin datos.</p>'}</div></div>
       <div class="box"><h2>Ventas por tipo de entrega</h2>${barras(r.tipos.map(x => ({ n: NOMBRE[x.n] || x.n, m: x.m })), pesos)}</div>
-      <div class="box"><h2>Productos más vendidos</h2>${barras(r.productos.map(x => ({ n: x.n, m: x.cant })), x => x + ' u.')}</div>
+      <div class="box"><h2>Ventas por Categoría</h2>${barras(r.categorias.map(x => ({ n: x.n, m: x.monto })), pesos)}</div>
       <div class="box"><h2>Tiempos promedio</h2><div class="row"><span>Espera en cocina</span><i style="width:${Math.min(100, r.tiempos.espera * 3)}%"></i><b>${r.tiempos.espera} min</b></div><div class="row"><span>Preparación</span><i style="width:${Math.min(100, r.tiempos.prep * 3)}%"></i><b>${r.tiempos.prep} min</b></div><div class="row"><span>Reparto</span><i style="width:${Math.min(100, r.tiempos.reparto * 3)}%"></i><b>${r.tiempos.reparto} min</b></div></div></div>
-      <div class="box" style="margin-top:.8rem;overflow-x:auto"><h2>Repartidores (en el período, sin filtrar por tipo ni producto)</h2><table><tr><th>Nombre</th><th>Envíos</th><th>Sin cargo</th><th>Básico</th><th>Total pagado</th><th>Dif. rendiciones</th></tr>
+      <div class="box" style="margin-top:.8rem;overflow-x:auto"><h2>Repartidores (en el período, sin filtrar por tipo ni categoría)</h2><table><tr><th>Nombre</th><th>Envíos</th><th>Sin cargo</th><th>Básico</th><th>Total pagado</th><th>Dif. rendiciones</th></tr>
       ${r.repartidores.map(x => `<tr><td>${esc(x.n)}</td><td>${x.envios}</td><td>${x.sc}</td><td>${pesos(x.basico)}</td><td>${pesos(x.total)}</td><td>${pesos(x.dif)}</td></tr>`).join('') || '<tr><td colspan="6">Sin datos.</td></tr>'}</table></div>`;
-    const filtros = () => ({ desde: $('#d').value, hasta: $('#h').value, tipo: $('#t').value, producto: $('#p').value });
-    $('#go').onclick = () => reportes(filtros(), lista);
+    
+    const filtros = () => {
+      const selectCat = $('#cat');
+      const catsSel = Array.from(selectCat.selectedOptions).map(opt => opt.value);
+      return { desde: $('#d').value, hasta: $('#h').value, tipo: $('#t').value, categorias: catsSel };
+    };
+    $('#go').onclick = () => reportes(filtros(), listaCategorias);
     $('#pdf').onclick = () => window.print();
     $('#mail').onclick = async () => {
       $('#msg').textContent = 'Enviando…'; const x = await api('admin_enviar_reporte', { token, ...filtros() });
