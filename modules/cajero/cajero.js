@@ -9,13 +9,16 @@ const CSS = `
 .cl{max-width:34rem;margin:0 auto;padding:6vh 1.2rem}.cl label{display:block;margin:1rem 0 .4rem;color:var(--tenue)}
 .gr{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}.gr div{display:flex;align-items:center;gap:.5rem}.gr b{min-width:4.5rem;text-align:right}
 .tot{display:flex;justify-content:space-between;font-size:1.3rem;font-weight:700;margin:1rem 0}.err{color:#f0b13c;min-height:1.4em}
-.ch{display:flex;justify-content:space-between;align-items:center;padding:.7rem 1.2rem;color:var(--tenue);border-bottom:1px solid #2a3340}
+.ch{display:flex;justify-content:space-between;align-items:center;gap:.8rem;flex-wrap:wrap;padding:.7rem 1.2rem;color:var(--tenue);border-bottom:1px solid #2a3340}
+.ch-stats{display:flex;justify-content:center;align-items:center;gap:.6rem;flex:1;flex-wrap:wrap}
+.stat-pill{background:#151a22;border:1px solid #34404f;border-radius:8px;padding:.35rem .75rem;font-size:.85rem;color:var(--txt);white-space:nowrap}
+.stat-pill b{color:var(--acento);margin-left:.25rem}
 .pn{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:.8rem;padding:.8rem;height:calc(100vh - 7rem)}
 .pn section{background:var(--card);border-radius:12px;padding:1rem;overflow:auto}.pn section:first-child{grid-row:1/3}
 .pn h2{margin:0 0 .5rem;font-size:1.1rem;color:var(--acento)}.pn p{color:var(--tenue)}
-.dash-delivery-horiz{grid-column:1/3;background:var(--card);border-radius:12px;padding:.6rem .8rem;height:8rem;overflow-x:auto;box-sizing:border-box}
-.track-repartidores{display:flex;gap:.8rem;overflow-x:auto;padding-bottom:.2rem}
-.card-rep{background:#151a22;border-radius:8px;padding:.5rem .7rem;min-width:180px;border-left:4px solid var(--acento);flex-shrink:0}
+.dash-delivery-horiz{grid-column:1/3;background:var(--card);border-radius:12px;padding:.7rem .9rem;min-height:10.5rem;height:auto;overflow:visible;box-sizing:border-box}
+.track-repartidores{display:flex;gap:.8rem;flex-wrap:wrap;overflow:visible;padding-bottom:.2rem}
+.card-rep{background:#151a22;border-radius:8px;padding:.55rem .8rem;min-width:190px;border-left:4px solid var(--acento);flex-shrink:0}
 @media(max-width:900px){.pn{grid-template-columns:1fr;grid-template-rows:none;height:auto}.pn section:first-child{grid-row:auto}.dash-delivery-horiz{grid-column:auto;height:auto}}`;
 const CSS2 = `
 .mi{display:grid;grid-template-columns:1fr auto;gap:.1rem .6rem;padding:.5rem .6rem;margin-bottom:.4rem;border-radius:10px;background:#2a3340;border-left:5px solid var(--alerta)}.mi.EN_PREPARACION,.mi.EN_CAMINO{border-color:var(--acento)}.mi.LISTA,.mi.LIBRE{border-color:var(--exito)}.mi small{grid-column:1/3;color:var(--tenue)}.flash{animation:fl 1s 8}@keyframes fl{50%{background:#2f6b4f}}
@@ -197,6 +200,11 @@ timers.forEach(clearInterval); timers = [];
 root.innerHTML = `<style>${CSS}${CSS2}</style><div class="cj">
 <div class="ch">
 <span>Hola ${esc(ses.nombre)}, excelente jornada para hoy!</span>
+<div class="ch-stats">
+<div class="stat-pill">Venta de comidas:<b id="stComidas">${pesos(0)}</b></div>
+<div class="stat-pill">Venta de bebidas:<b id="stBebidas">${pesos(0)}</b></div>
+<div class="stat-pill">Monto a pagar repartidores:<b id="stRepartidores">${pesos(0)}</b></div>
+</div>
 <div style="display:flex;gap:.5rem">
 <button class="sec" id="btnStockDrawer" style="width:auto;padding:.5rem 1rem">📦 Stock</button>
 <button class="sec" id="cerrar" style="width:auto;padding:.5rem 1rem">Cerrar ventas</button>
@@ -249,6 +257,13 @@ if ($('#btnCloseStock')) $('#btnCloseStock').onclick = () => drawer.classList.re
 if ($('#searchStock')) $('#searchStock').oninput = (e) => renderStock(e.target.value);
 const ETQ = { RECIBIDA: 'En espera', EN_PREPARACION: 'Preparando', LISTA: 'Listo', EN_CAMINO: 'En camino' };
 let v = '', R = { cocina: [], repartos: [] }, listos = null, entregados = null; const flash = new Set();
+const pintarResumen = (src = {}) => {
+const res = src.resumen_dia || src.resumen || src;
+if ($('#stComidas')) $('#stComidas').textContent = pesos(res.venta_comidas ?? res.comidas ?? 0);
+if ($('#stBebidas')) $('#stBebidas').textContent = pesos(res.venta_bebidas ?? res.bebidas ?? 0);
+if ($('#stRepartidores')) $('#stRepartidores').textContent = pesos(res.monto_repartidores ?? res.envios_abonados ?? 0);
+};
+pintarResumen(D);
 const pintar = () => {
 if (!$('#mc')) return;
 $('#mc').innerHTML = R.cocina.map(t => `
@@ -265,12 +280,18 @@ if (r.error) alert('No se pudo cancelar: ' + r.error);
 v = ''; cargar();
 });
 if ($('#mr')) {
-$('#mr').innerHTML = R.repartos.map(x => `
+$('#mr').innerHTML = R.repartos.map(x => {
+const cobrarRep = x.total_a_pagar ?? x.monto_a_cobrar ?? x.total ?? x.pendiente ?? 0;
+return `
 <div class="card-rep ${x.estado}">
-<b>${esc(x.n || x.nombre)}</b><br>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem">
+<b>${esc(x.n || x.nombre)}</b>
+<b style="color:var(--exito);font-size:.9rem">${pesos(cobrarRep)}</b>
+</div>
 <span>${x.estado === 'EN_CAMINO' ? 'En camino: #' + esc(x.pedido || x.id_pedido) : 'Libre'}</span><br>
-<small style="color:var(--tenue)">${x.ultimo ? 'Última: ' + esc(x.ultimo) : 'Pendiente: ' + pesos(x.pendiente || 0)}</small>
-</div>`).join('') || '<p style="color:var(--tenue)">No hay repartidores activos.</p>';
+<small style="color:var(--tenue)">${x.ultimo ? 'Última: ' + esc(x.ultimo) : 'Entregados: ' + (x.entregados || 0)}</small>
+</div>`;
+}).join('') || '<p style="color:var(--tenue)">No hay repartidores activos.</p>';
 }
 };
 let rk = '';
@@ -294,6 +315,7 @@ if (!$('#mc')) return;
 const r = await api('cajero_monitor', { v });
 if (r.error || r.sin_cambios) return;
 v = r.v; R = r; mon.mesas = r.mesas || []; ctl.mesas();
+pintarResumen(r);
 if (r.stock) { stockData = r.stock; renderStock($('#searchStock')?.value || ''); }
 const ls = new Set((r.cocina || []).filter(t => t.estado === 'LISTA').map(t => t.id));
 if (listos) { const nuevos = [...ls].filter(x => !listos.has(x)); if (nuevos.length) { beep(); nuevos.forEach(x => { flash.add(x); setTimeout(() => { flash.delete(x); pintar(); }, 8000); }); } }
@@ -351,15 +373,18 @@ if (km <= tarifas[i].km) { p = tarifas[i].precio; break; }
 return p;
 };
 const calc = () => {
-const L = Object.values(S.items), sub = L.reduce((s, i) => s + i.p * i.c, 0), des = L.filter(i => (D.cats || []).includes(i.cat)).reduce((s, i) => s + i.p * i.c, 0);
+const L = Object.values(S.items), sub = L.reduce((s, i) => s + i.p * i.c, 0);
+const des = L.filter(i => (D.cats || []).includes(i.cat) && (!i.t || i.t === 'COMIDA') && !i.promo && !/^PROMO\b|^FLASH/i.test(i.n)).reduce((s, i) => s + i.p * i.c, 0);
 const cli = S.tipo === 'SALON' ? null : (D.clientes || []).find(c => c.n.toUpperCase() === val('#nom').toUpperCase());
 const r = cli && (D.reglas || []).find(x => x.nivel === cli.nivel), aplica = r && (r.dias === 'TODOS' || r.dias.split(',').includes(D.dia));
-const pct = aplica ? r.pct : 0, gratis = S.tipo === 'DELIVERY' && !!r && r.gratis === 'SI';
+const pct = aplica ? r.pct : 0;
+const rd = Math.ceil((sub - des * pct) / 100) * 100;
+const minGratis = Number(r && r.gratis) || (r && r.gratis === 'SI' ? 15000 : 0);
+const gratis = S.tipo === 'DELIVERY' && !!r && (r.gratis === 'SI' || Number(r.gratis) > 0) && rd > minGratis;
 const km = S.tipo === 'DELIVERY' ? +val('#km') || 0 : 0;
 const envioBase = S.tipo === 'DELIVERY' ? (val('#mon') !== '' ? +val('#mon') || 0 : obtenerPrecioEnvioCalculado(km)) : 0;
 const bonificado = S.tipo === 'DELIVERY' && $('#chkBonificado') && $('#chkBonificado').checked;
 const envioCliente = (gratis || bonificado) ? 0 : envioBase;
-const rd = Math.ceil((sub - des * pct) / 100) * 100;
 const ahorroDescuento = sub - rd;
 const ahorroEnvio = (gratis || bonificado) ? envioBase : 0;
 const totalAhorro = ahorroDescuento + ahorroEnvio;
@@ -386,7 +411,7 @@ tc.innerHTML = '';
 }
 if ($('#tt')) {
 $('#tt').innerHTML = `<div><span>Productos</span><span>${pesos(c.sub)}</span></div>
-${c.pct ? `<div><span>Descuento ${c.pct * 100}% (redondeado)</span><span>${pesos(c.rd)}</span></div>` : ''}
+${c.pct ? `<div><span>Descuento ${Math.round(c.pct * 100)}% (redondeado)</span><span>${pesos(c.rd)}</span></div>` : ''}
 ${S.tipo === 'DELIVERY' ? `
 <div>
 <span>Envío ${c.km ? '(' + c.km + ' km)' : ''} ${c.gratis ? '<span class="ok">sin cargo</span>' : c.bonificado ? '<span class="ok">bonificado</span>' : ''}</span>
