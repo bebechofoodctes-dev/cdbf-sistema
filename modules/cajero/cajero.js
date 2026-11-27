@@ -88,6 +88,7 @@ function imprimirTicketDirecto(pedidoData) {
   const subtotal = Number(pedidoData.subtotal || 0);
   const envio = Number(pedidoData.envio || 0);
   const totalDescuento = Number(pedidoData.total_descuento ?? pedidoData.descuento ?? 0);
+  const notaDescuento = escH(pedidoData.nota_descuento || '');
   const totalPagar = Number(pedidoData.total ?? Math.max(0, subtotal - totalDescuento + envio));
   const ahorro = Number(pedidoData.ahorro ?? totalDescuento);
 
@@ -165,6 +166,7 @@ function imprimirTicketDirecto(pedidoData) {
     <div class="totales-row"><span>Subtotal:</span> <span>${pForm(subtotal)}</span></div>
     <div class="totales-row"><span>Envío${pedidoData.envio_bonificado ? ' (bonificado)' : ''}:</span> <span>${pForm(envio)}</span></div>
     <div class="totales-row"><span>Total descuento:</span> <span>${pForm(totalDescuento)}</span></div>
+    ${notaDescuento ? `<div class="totales-row"><span><i>${notaDescuento}</i></span> <span></span></div>` : ''}
     <div class="totales-row total-final"><span>Total a pagar:</span> <span>${pForm(totalPagar)}</span></div>
   </div>
 
@@ -994,11 +996,16 @@ function carga(el, D, ses, mon) {
       .filter(i => (D.cats || []).includes(_U(i.cat)) && _U(i.t || 'COMIDA') === 'COMIDA' && !i.promo && !/^PROMO\b|^FLASH/i.test(i.n))
       .reduce((s, i) => s + i.p * i.c, 0);
 
+    const tieneCombo = L.some(i => _U(i.t) === 'COMBO' || _U(i.cat) === 'COMBO');
+
     const cli = S.tipo === 'SALON' ? null : (D.clientes || []).find(c => _U(c.n) === _U(val('#nom')));
     const r = cli && (D.reglas || []).find(x => x.nivel === cli.nivel);
     const aplica = r && (r.dias === 'TODOS' || r.dias.split(',').includes(D.dia));
     const pct = aplica ? r.pct : 0;
     const rd = Math.ceil((sub - des * pct) / 100) * 100;
+
+    const sinDescuentoPorCombo = pct > 0 && tieneCombo && des === 0;
+    const avisoComboParcial = pct > 0 && tieneCombo && des > 0;
 
     const tieneEnvioGratisRegla = !!r && (r.gratis === 'SI' || Number(r.gratis) > 0);
     const minGratis = Number(r && r.gratis) > 0 ? Number(r.gratis) : 15000;
@@ -1031,7 +1038,9 @@ function carga(el, D, ses, mon) {
       ptsGanadosBase,
       nuevo: !!val('#nom') && !cli,
       ahorro: totalAhorro,
-      ahorroDescuento
+      ahorroDescuento,
+      sinDescuentoPorCombo,
+      avisoComboParcial
     };
   };
 
@@ -1051,7 +1060,8 @@ ${c.ahorro > 0 ? `<div style="color:var(--exito);font-weight:bold;margin-top:.3r
     }
     if ($('#tt')) {
       $('#tt').innerHTML = `<div><span>Productos</span><span>${pesos(c.sub)}</span></div>
-${c.pct ? `<div><span>Descuento ${Math.round(c.pct * 100)}% (redondeado)</span><span>${pesos(c.rd)}</span></div>` : ''}
+${c.pct && !c.sinDescuentoPorCombo ? `<div><span>Descuento ${Math.round(c.pct * 100)}% (redondeado)</span><span>${pesos(c.rd)}</span></div>` : ''}
+${c.sinDescuentoPorCombo || c.avisoComboParcial ? `<div><span style="color:var(--alerta);font-size:.9rem">Descuento no aplicable en combos</span><span></span></div>` : ''}
 ${S.tipo === 'DELIVERY' ? `
 <div>
 <span>Envío ${c.km ? '(' + c.km + ' km)' : ''} ${c.gratis ? '<span class="ok">sin cargo</span>' : c.bonificado ? '<span class="ok">bonificado</span>' : ''}</span>
@@ -1254,6 +1264,9 @@ ${S.tipo === 'DELIVERY' ? `
   const obtenerDatosActuales = () => {
     const c = calc();
     const itemsParaTicket = Object.values(S.items).map(i => ({ n: i.n, c: i.c, p: i.p, o: i.o, op: i.op }));
+    const notaDescuento = (c.sinDescuentoPorCombo || c.avisoComboParcial)
+      ? 'Descuento no aplicable en combos'
+      : '';
     return {
       tipo: S.tipo,
       mesa: val('#mesa'),
@@ -1265,6 +1278,7 @@ ${S.tipo === 'DELIVERY' ? `
       envio: c.envioCliente,
       envio_bonificado: c.gratis || c.bonificado,
       total_descuento: c.ahorroDescuento,
+      nota_descuento: notaDescuento,
       total: c.total,
       ahorro: c.ahorro
     };
